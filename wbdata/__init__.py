@@ -21,16 +21,13 @@ from __future__ import print_function, unicode_literals
 
 import datetime
 import logging
-import urllib
-import urllib2
-import json
-import time
 
 try:
     import pandas as pd
 except ImportError:
     pd = None
 
+import fetcher
 
 BASE_URL = "http://api.worldbank.org"
 COUNTRIES_URL = "{0}/countries".format(BASE_URL)
@@ -39,8 +36,8 @@ INDICATOR_URL = "{0}/indicator".format(BASE_URL)
 LTYPE_URL = "{0}/lendingTypes".format(BASE_URL)
 SOURCES_URL = "{0}/sources".format(BASE_URL)
 TOPIC_URL = "{0}/topics".format(BASE_URL)
-PER_PAGE = 1000
 INDIC_ERROR = "Cannot specify more than one of indicator, source, and topic"
+FETCHER = fetcher.Fetcher()
 
 
 def __parse_value_or_iterable(arg):
@@ -51,36 +48,6 @@ def __parse_value_or_iterable(arg):
     if isinstance(arg, basestring):
         return str(arg)
     return ";".join(arg)
-
-
-def __get_paged_data(query_url, args=None):
-    """
-    Page through queries and return a list of the results
-
-    :query_url: the pageless query url
-    :returns: the merged list of all results from all pages
-    """
-    if not args:
-        args = []
-    args.extend([("format", "json"), ("per_page", PER_PAGE)])
-    query_url = "?".join((query_url, urllib.urlencode(args)))
-    logging.debug("Query using {0}".format(query_url))
-    print(query_url)
-    results = []
-    original_url = query_url
-    while 1:
-        query = urllib2.urlopen(query_url)
-        response = json.load(query)
-        query.close()
-        results.extend(response[1])
-        this_page = response[0]['page']
-        pages = response[0]['pages']
-        logging.debug("Processed page {0} of {1}".format(this_page, pages))
-        if this_page == pages:
-            break
-        query_url = original_url + "&page={0}".format(int(this_page + 1))
-        time.sleep(1)
-    return results
 
 
 def __parse_monthly_date(data_date):
@@ -114,12 +81,19 @@ def __parse_data_date(frequency, data_date):
     raise TypeError("Bad data_date")
 
 
+def __cast(value):
+    try:
+        return float(value)
+    except:
+        return None
+
+
 def __convert_to_dataframe(data, column_name):
     if not pd:
         raise ValueError("Pandas must be installed to be used")
-    return pd.DataFrame({"country": [i["country"] for i in data],
+    return pd.DataFrame({"country": [i["country"]["value"] for i in data],
                          "date": [i["date"] for i in data],
-                         column_name: [i["value"] for i in data]})
+                         column_name: [__cast(i["value"]) for i in data]})
 
 
 def get_data(indicator, countries="all", aggregates=None, data_date=None,
@@ -136,9 +110,9 @@ def get_data(indicator, countries="all", aggregates=None, data_date=None,
     :mrv: the number of most recent values to retrieve
     :gapfill: with mrv, fills gaps with the most recent values
     :frequency: 'Q', 'M', or 'Y' for quarterly, monthly, or annual data
-    :pandas: if true, return results as a pandas dataframe
+    :pandas: if True, return results as a pandas DataFrame
     :column_name: the desired name for the pandas column
-    :returns: @todo
+    :returns: list of dictionaries or pandas DataFrame
     """
     query_url = COUNTRIES_URL
     if aggregates:
@@ -161,7 +135,7 @@ def get_data(indicator, countries="all", aggregates=None, data_date=None,
         args.append(("MRV", mrv))
     if gapfill:
         args.append(("Gapfill", "Y"))
-    data = __get_paged_data(query_url, args)
+    data = FETCHER.fetch(query_url, args)
     if pandas:
         return __convert_to_dataframe(data, column_name)
     return data
@@ -180,7 +154,7 @@ def __id_only_query(query_url, id_or_ids):
         else:
             id_part = "/".join([str(i) for i in id_or_ids])
             query_url = "{0}/{1}".format(query_url, id_part)
-    return __get_paged_data(query_url)
+    return FETCHER.fetch(query_url)
 
 
 def get_source(source_id=None):
@@ -235,13 +209,46 @@ def get_indicator(indicator=None, source=None, topic=None):
         if source or topic:
             raise ValueError(INDIC_ERROR)
         query_url = "/".join((INDICATOR_URL, indicator))
-        return __get_paged_data(query_url)
+        return FETCHER.fetch(query_url)
     if source:
         if topic:
             raise ValueError(INDIC_ERROR)
         query_url = "/".join((SOURCES_URL, str(source), "indicators"))
-        return __get_paged_data(query_url)
+        return FETCHER.fetch(query_url)
     if topic:
         query_url = "/".join((TOPIC_URL, str(topic), "indicators"))
-        return __get_paged_data(query_url)
-    return __get_paged_data(INDICATOR_URL)
+        return FETCHER.fetch(query_url)
+    return FETCHER.fetch(INDICATOR_URL)
+
+
+def search_indicators(query, source=None, topic=None):
+    """
+    Search indicators for a certain term.  Very simple.  Only one of source or
+    topic can be specified
+
+    :query: the term to match against indicator names
+    :source: if present, id of desired source
+    :topic: if present, id of desired topic
+    :returns: a list of dictionaries representing indicators
+
+    """
+    indicators = get_indicator(source=source, topic=topic)
+    lower = query.lower()
+    return [i for i in indicators if lower in i["name"].lower()]
+
+
+def examine(objs):
+    """
+    Courtesy function to display ids and names from lists returned by wbdata.
+    This will mostly be useful in interactive mode.
+
+    :objs: a list of dictionary objects as returned by wbdata
+    """
+    try:
+        max_length = str(max((len(i['id']) for i in objs)))
+    except ValueError:
+        return
+    for i in objs:
+        templ = "{id:" + max_length + "}\t{name}"
+        print(templ.format(**i))
+
