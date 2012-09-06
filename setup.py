@@ -8,8 +8,8 @@ setup(
     author="Oliver Sherouse",
     author_email="oliver.sherouse@gmail.com",
     packages=["wbdata"],
-    url="http://pypi.python.org/pypi/wbdata",
+    url="http://code.google.com/p/wbdata/",
     licence="GPL2",
     description="A library to access World Bank data",
-    long_description=open('README.txt'.read()),
-    )
+    long_description=open('README.txt'.read())
+)
