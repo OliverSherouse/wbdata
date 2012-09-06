@@ -11,5 +11,5 @@ setup(
     url="http://code.google.com/p/wbdata/",
     licence="GPL2",
     description="A library to access World Bank data",
-    long_description=open('README.txt'.read())
+    long_description=open('README.txt').read()
 )
