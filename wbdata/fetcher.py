@@ -43,6 +43,7 @@ CACHEPATH = os.path.join(CACHEDIR, "cache")
 PER_PAGE = 1000
 DATE_IDX = 0
 DATA_IDX = 1
+TRIES = 5
 
 
 class Fetcher(object):
@@ -102,9 +103,18 @@ class Fetcher(object):
         results = []
         original_url = query_url
         while 1:
-            query = urlopen(query_url)
-            response = json.load(query)
-            query.close()
+            thistry = 0
+            while 1:
+                try:
+                    query = urlopen(query_url)
+                    response = json.load(query)
+                    query.close()
+                    break
+                except StandardError as e:
+                    if thistry < TRIES:
+                        continue
+                    else:
+                        raise e
             results.extend(response[1])
             this_page = response[0]['page']
             pages = response[0]['pages']

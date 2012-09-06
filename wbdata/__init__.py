@@ -29,6 +29,7 @@ except ImportError:
 
 import fetcher
 
+__all__ = ["fetcher"]
 BASE_URL = "http://api.worldbank.org"
 COUNTRIES_URL = "{0}/countries".format(BASE_URL)
 ILEVEL_URL = "{0}/incomeLevels".format(BASE_URL)
@@ -38,6 +39,11 @@ SOURCES_URL = "{0}/sources".format(BASE_URL)
 TOPIC_URL = "{0}/topics".format(BASE_URL)
 INDIC_ERROR = "Cannot specify more than one of indicator, source, and topic"
 FETCHER = fetcher.Fetcher()
+
+
+def __assert_pandas():
+    if not pd:
+        raise ValueError("Pandas must be installed to be used")
 
 
 def __parse_value_or_iterable(arg):
@@ -55,7 +61,7 @@ def __parse_monthly_date(data_date):
 
 
 def __parse_quarterly_date(data_date):
-    return "{0}Q{1}".format(data_date.year, data_date.month // 4)
+    return "{0}Q{1}".format(data_date.year, data_date.month // 4 + 1)
 
 
 def __parse_yearly_date(data_date):
@@ -81,6 +87,37 @@ def __parse_data_date(frequency, data_date):
     raise TypeError("Bad data_date")
 
 
+def __convert_year_to_datetime(yearstr):
+    return datetime.datetime.strptime(yearstr, "%Y")
+
+
+def __convert_month_to_datetime(monthstr):
+    split = quarterstr.split("M")
+    return datetime.datetime(int(split[0]), int(split[1]), 1)
+
+
+def __convert_quarter_to_datetime(quarterstr):
+    print(quarterstr)
+    split = quarterstr.split("Q")
+    quarter = int(split[1])
+    month = quarter * 3 - 2
+    return datetime.datetime(int(split[0]), month, 1)
+
+
+def __convert_dates_to_datetime(data, frequency):
+    first = data[0]['date']
+    if "M" in first:
+        converter = __convert_month_to_datetime
+    elif "Q" in first:
+        converter = __convert_quarter_to_datetime
+    else:
+        converter = __convert_year_to_datetime
+
+    for datum in data:
+        datum['date'] = converter(datum['date'])
+    return data
+
+
 def __cast(value):
     try:
         return float(value)
@@ -89,27 +126,27 @@ def __cast(value):
 
 
 def __convert_to_dataframe(data, column_name):
-    if not pd:
-        raise ValueError("Pandas must be installed to be used")
+    __assert_pandas()
     return pd.DataFrame({"country": [i["country"]["value"] for i in data],
                          "date": [i["date"] for i in data],
                          column_name: [__cast(i["value"]) for i in data]})
 
 
 def get_data(indicator, countries="all", aggregates=None, data_date=None,
-             mrv=None, gapfill=None, frequency="Y", pandas=True,
-             column_name="value"):
+             mrv=None, gapfill=None, frequency=None, convert_date=True,
+             pandas=False, column_name="value"):
     """
     Retrieve indicators for given countries and years
 
     :indicator: the desired indicator code
     :countries: a country code, sequence of country codes, or "all" (default)
     :aggregates: the regional or aggregate code, or sequence thereof
-    :date: the desired date as a datetime.date object or a 2-sequence with
+    :date: the desired date as a datetime object or a 2-sequence with
         start and end dates
     :mrv: the number of most recent values to retrieve
     :gapfill: with mrv, fills gaps with the most recent values
-    :frequency: 'Q', 'M', or 'Y' for quarterly, monthly, or annual data
+    :frequency: 'Q', 'M', or 'Y' for units with mrv
+    :convert_date: if True, convert date field to a datetime.datetime object.
     :pandas: if True, return results as a pandas DataFrame
     :column_name: the desired name for the pandas column
     :returns: list of dictionaries or pandas DataFrame
@@ -135,7 +172,14 @@ def get_data(indicator, countries="all", aggregates=None, data_date=None,
         args.append(("MRV", mrv))
     if gapfill:
         args.append(("Gapfill", "Y"))
+    if frequency:
+        if frequency in ("M", "Q", "Y"):
+            args.append(("frequency", frequency))
+        else:
+            raise ValueError("Bad Frequency")
     data = FETCHER.fetch(query_url, args)
+    if convert_date:
+        data = __convert_dates_to_datetime(data, frequency)
     if pandas:
         return __convert_to_dataframe(data, column_name)
     return data
@@ -252,3 +296,34 @@ def examine(objs):
         templ = "{id:" + max_length + "}\t{name}"
         print(templ.format(**i))
 
+
+def get_dataframe_from_indicators(indicators, countries="all", aggregates=None,
+                                  data_date=None, mrv=None, gapfill=None,
+                                  frequency=None, convert_date=True):
+    """
+    Convenience function to download a set of indicators and merge them into
+    a pandas dataframe on the 'country' and 'date' columns.
+
+    :indicators: An dictionary where the keys are desired indicators and the
+        values are the desired column names
+    :countries: a country code, sequence of country codes, or "all" (default)
+    :aggregates: the regional or aggregate code, or sequence thereof
+    :data_date: the desired date as a datetime object or a 2-sequence with
+        start and end dates
+    :mrv: the number of most recent values to retrieve
+    :gapfill: with mrv, fills gaps with the most recent values
+    :frequency: 'Q', 'M', or 'Y' for units with mrv
+    :convert_date: if True, convert date field to a datetime.datetime object.
+    :returns: a pandas dataframe
+
+    """
+    __assert_pandas()
+    for i, indicator in enumerate(indicators.keys()):
+        indic_df = get_data(indicator, countries, aggregates, data_date, mrv,
+                            gapfill, frequency, convert_date, pandas=True,
+                            column_name=indicators[indicator])
+        if i:
+            merged = merged.merge(indic_df, on=["country", "date"])
+        else:
+            merged = indic_df
+    return merged
