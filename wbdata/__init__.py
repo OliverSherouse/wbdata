@@ -47,12 +47,9 @@ def __assert_pandas():
 
 
 def __parse_value_or_iterable(arg):
-    """
-    :arg: either a single object or a sequence of objects
-    :returns: a string with either the single value or list joined by ';'
-    """
-    if isinstance(arg, basestring):
+    if type(arg) in ("str", "unicode"):
         return str(arg)
+
     return ";".join(arg)
 
 
@@ -97,7 +94,6 @@ def __convert_month_to_datetime(monthstr):
 
 
 def __convert_quarter_to_datetime(quarterstr):
-    print(quarterstr)
     split = quarterstr.split("Q")
     quarter = int(split[1])
     month = quarter * 3 - 2
@@ -186,17 +182,11 @@ def get_data(indicator, countries="all", aggregates=None, data_date=None,
 
 
 def __id_only_query(query_url, id_or_ids):
-    """@todo: Docstring for __id_only_query
-
-    :query_url: @todo
-    :id_or_ids: @todo
-    :returns: @todo
-    """
     if id_or_ids:
-        if type(id_or_ids) == "int":
-            query_url = "{0}/{1}".format(query_url, type)
+        if type(id_or_ids) in (int, str, unicode):
+            query_url = "{0}/{1}".format(query_url, id_or_ids)
         else:
-            id_part = "/".join([str(i) for i in id_or_ids])
+            id_part = ";".join([str(i) for i in id_or_ids])
             query_url = "{0}/{1}".format(query_url, id_part)
     return FETCHER.fetch(query_url)
 
@@ -205,37 +195,53 @@ def get_source(source_id=None):
     """
     Retrieve information on a source
 
-    :source_id: an id number or sequence thereof.  None returns all sources.
-    :returns: @todo
+    :source_id: an id number or sequence thereof.  None returns all sources
+    :returns: a dictionary describing a source
     """
     return __id_only_query(SOURCES_URL, source_id)
 
 
 def get_incomelevel(level_id=None):
-    """@todo: Docstring for get_incomelevel
+    """
+    Retrieve information on an income level aggregate
 
-    :level_id: @todo
-    :returns: @todo
+    :level_id: an id number or sequence thereof.  None returns all income level
+        aggregates
+    :returns: a dictionary describing an income level aggregate
     """
     return __id_only_query(ILEVEL_URL, level_id)
 
 
 def get_topic(topic_id=None):
-    """@todo: Docstring for get_topic
+    """
+    Retrieve information on a topic
 
-    :topic_id: @todo
-    :returns: @todo
+    :topic_id: an id number or sequence thereof.  None returns all topics
+    :returns: a dictionary describing an income level aggregate
     """
     return __id_only_query(TOPIC_URL, topic_id)
 
 
 def get_lendingtype(type_id=None):
-    """@todo: Docstring for get_lendingtype
+    """
+    Retrieve information on an income level aggregate
 
-    :level_id: @todo
-    :returns: @todo
+    :level_id: an id number or sequence thereof.  None returns all lending type
+        aggregates
+    :returns: a dictionary describing an lending type aggregate
     """
     return __id_only_query(LTYPE_URL, type_id)
+
+
+def get_country(country_id=None):
+    """
+    Retrieve information on a country or regional aggregate
+
+    :country_id: an id or sequence thereof.  None returns all countries and
+        aggregates
+    :returns: a dictionary describing an lending type aggregate
+    """
+    return __id_only_query(COUNTRIES_URL, country_id)
 
 
 def get_indicator(indicator=None, source=None, topic=None):
