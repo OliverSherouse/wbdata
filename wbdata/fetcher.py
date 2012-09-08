@@ -22,7 +22,8 @@ from __future__ import print_function, unicode_literals
 import datetime
 import json
 import logging
-import os.path
+import os
+import sys
 import time
 
 try:  # python 2
@@ -34,9 +35,20 @@ except ImportError:  # python 3
     from urllib.request import urlopen
     from urlllib.parse import urlencode
 
-import appdirs
+# Inspiration for below from Trent Mick and Sridhar Ratnakumar
+# <http://pypi.python.org/pypi/appdirs/1.2.0>
 
-CACHEDIR = appdirs.user_cache_dir("wbdata", appauthor="wbdata")
+if sys.platform.startswith("win"):
+    BASEDIR = os.path.join(os.getenv("LOCALAPPDATA",
+                                     os.getenv("APPDATA",
+                                               os.path.expanduser("~"))),
+                           "wbdata")
+elif sys.platform is "darwin":
+    BASEDIR = os.path.expanduser('~/Library/Caches')
+else:
+    BASEDIR = os.getenv('XDG_CACHE_HOME', os.path.expanduser('~/.cache'))
+
+CACHEDIR = os.path.join(BASEDIR, 'wbdata')
 if not os.path.exists(CACHEDIR):
     os.mkdir(CACHEDIR)
 CACHEPATH = os.path.join(CACHEDIR, "cache")
@@ -52,7 +64,6 @@ class Fetcher(object):
     Bank API
     """
     def __init__(self):
-        """@todo: to be defined """
         try:
             with open(CACHEPATH) as cachefile:
                 self.cache = pickle.load(cachefile)
