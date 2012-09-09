@@ -21,6 +21,7 @@ from __future__ import print_function, unicode_literals
 
 import datetime
 import logging
+import sys
 
 try:
     import pandas as pd
@@ -30,6 +31,7 @@ except ImportError:
 import fetcher
 
 __all__ = ["fetcher"]
+INTERACTIVE = sys.__stdin__.isatty()
 BASE_URL = "http://api.worldbank.org"
 COUNTRIES_URL = "{0}/countries".format(BASE_URL)
 ILEVEL_URL = "{0}/incomeLevels".format(BASE_URL)
@@ -38,6 +40,7 @@ LTYPE_URL = "{0}/lendingTypes".format(BASE_URL)
 SOURCES_URL = "{0}/sources".format(BASE_URL)
 TOPIC_URL = "{0}/topics".format(BASE_URL)
 INDIC_ERROR = "Cannot specify more than one of indicator, source, and topic"
+
 FETCHER = fetcher.Fetcher()
 
 
@@ -47,9 +50,8 @@ def __assert_pandas():
 
 
 def __parse_value_or_iterable(arg):
-    if type(arg) in ("str", "unicode"):
+    if type(arg) in (int, str, unicode):
         return str(arg)
-
     return ";".join(arg)
 
 
@@ -181,70 +183,105 @@ def get_data(indicator, countries="all", aggregates=None, data_date=None,
     return data
 
 
-def __id_only_query(query_url, id_or_ids):
+def __id_only_query(query_url, id_or_ids, display):
+    if display is None:
+        display = INTERACTIVE
     if id_or_ids:
-        if type(id_or_ids) in (int, str, unicode):
-            query_url = "{0}/{1}".format(query_url, id_or_ids)
-        else:
-            id_part = ";".join([str(i) for i in id_or_ids])
-            query_url = "{0}/{1}".format(query_url, id_part)
-    return FETCHER.fetch(query_url)
+        query_url = "/".join((query_url, __parse_value_or_iterable(id_or_ids)))
+    results = FETCHER.fetch(query_url)
+    if display:
+        print_ids_and_names(results)
+    else:
+        return results
 
 
-def get_source(source_id=None):
+def get_source(source_id=None, display=None):
     """
     Retrieve information on a source
 
     :source_id: an id number or sequence thereof.  None returns all sources
-    :returns: a dictionary describing a source
+    :display: if True,print ids and names instead of returning results.
+        Defaults to True if in interactive prompt, or False otherwise
+    :returns: if display is False, a dictionary describing a source
     """
-    return __id_only_query(SOURCES_URL, source_id)
+    return __id_only_query(SOURCES_URL, source_id, display)
 
 
-def get_incomelevel(level_id=None):
+def get_incomelevel(level_id=None, display=None):
     """
     Retrieve information on an income level aggregate
 
     :level_id: an id number or sequence thereof.  None returns all income level
         aggregates
-    :returns: a dictionary describing an income level aggregate
+    :display: if True,print ids and names instead of returning results.
+        Defaults to True if in interactive prompt, or False otherwise
+    :returns: if display is False a dictionary describing an income level
+        aggregate
     """
-    return __id_only_query(ILEVEL_URL, level_id)
+    return __id_only_query(ILEVEL_URL, level_id, display)
 
 
-def get_topic(topic_id=None):
+def get_topic(topic_id=None, display=None):
     """
     Retrieve information on a topic
 
     :topic_id: an id number or sequence thereof.  None returns all topics
-    :returns: a dictionary describing an income level aggregate
+    :display: if True,print ids and names instead of returning results.
+        Defaults to True if in interactive prompt, or False otherwise
+    :returns: if display is False, a dictionary describing an income level
+        aggregate
     """
-    return __id_only_query(TOPIC_URL, topic_id)
+    return __id_only_query(TOPIC_URL, topic_id, display)
 
 
-def get_lendingtype(type_id=None):
+def get_lendingtype(type_id=None, display=None):
     """
     Retrieve information on an income level aggregate
 
     :level_id: an id number or sequence thereof.  None returns all lending type
         aggregates
-    :returns: a dictionary describing an lending type aggregate
+    :display: if True,print ids and names instead of returning results.
+        Defaults to True if in interactive prompt, or False otherwise
+    :returns: if display is False, a dictionary describing an lending type
+        aggregate
     """
-    return __id_only_query(LTYPE_URL, type_id)
+    return __id_only_query(LTYPE_URL, type_id, display)
 
 
-def get_country(country_id=None):
+def get_country(country_id=None, incomelevel=None, lendingtype=None,
+                display=None):
     """
-    Retrieve information on a country or regional aggregate
+    Retrieve information on a country or regional aggregate.  Can specify
+    either country_id, or the aggregates, but not both
 
     :country_id: an id or sequence thereof.  None returns all countries and
-        aggregates
-    :returns: a dictionary describing an lending type aggregate
+        aggregates.  incomelevel and lendingtype are mutually exclusive
+    :incomelevel: desired incomelevel id or ids
+    :lendingtype: desired lendingtype id or ids
+    :display: if True,print ids and names instead of returning results.
+        Defaults to True if in interactive prompt, or False otherwise
+    :returns: if display is False, a dictionary describing an lending type
+        aggregate
     """
-    return __id_only_query(COUNTRIES_URL, country_id)
+    if display is None:
+        display = INTERACTIVE
+    if country_id:
+        if incomelevel or lendingtype:
+            raise ValueError("Can't specify country_id and aggregates")
+        return __id_only_query(COUNTRIES_URL, country_id, display)
+    args = []
+    if incomelevel:
+        args.append(("incomeLevel", __parse_value_or_iterable(incomelevel)))
+    if lendingtype:
+        args.append(("lendingType", __parse_value_or_iterable(lendingtype)))
+    results = FETCHER.fetch(COUNTRIES_URL, args)
+    if display:
+        print_ids_and_names(results)
+    else:
+        return results
 
 
-def get_indicator(indicator=None, source=None, topic=None):
+def get_indicator(indicator=None, source=None, topic=None, display=None):
     """
     Retrieve information about an indicator or indicators.  Only one of
     indicator, source, and topic can be specified.  Specifying none of the
@@ -253,41 +290,58 @@ def get_indicator(indicator=None, source=None, topic=None):
     :indicator: the specific indicator code
     :source: a source id
     :topic: a topic id
-    :returns: a list of dictionary objects representing indicators
+    :display: if True,print ids and names instead of returning results.
+        Defaults to True if in interactive prompt, or False otherwise
+    :returns: if display is False, a list of dictionary objects representing
+        indicators
     """
+    if display is None:
+        display = INTERACTIVE
     if indicator:
         if source or topic:
             raise ValueError(INDIC_ERROR)
         query_url = "/".join((INDICATOR_URL, indicator))
-        return FETCHER.fetch(query_url)
-    if source:
+    elif source:
         if topic:
             raise ValueError(INDIC_ERROR)
         query_url = "/".join((SOURCES_URL, str(source), "indicators"))
-        return FETCHER.fetch(query_url)
-    if topic:
+    elif topic:
         query_url = "/".join((TOPIC_URL, str(topic), "indicators"))
-        return FETCHER.fetch(query_url)
-    return FETCHER.fetch(INDICATOR_URL)
+    else:
+        query_url = INDICATOR_URL
+    results = FETCHER.fetch(query_url)
+    if display:
+        print_ids_and_names(results)
+    else:
+        return(results)
 
 
-def search_indicators(query, source=None, topic=None):
+def search_indicators(query, source=None, topic=None, display=None):
     """
     Search indicators for a certain term.  Very simple.  Only one of source or
-    topic can be specified
+    topic can be specified. In interactive mode, will return None and print
+    ids and names unless suppress_printing is True.
 
     :query: the term to match against indicator names
     :source: if present, id of desired source
     :topic: if present, id of desired topic
-    :returns: a list of dictionaries representing indicators
-
+    :display: if True,print ids and names instead of returning results.
+        Defaults to True if in interactive prompt, or False otherwise
+    :returns: a list of dictionaries representing indicators if display is
+        False
     """
-    indicators = get_indicator(source=source, topic=topic)
+    if display is None:
+        display = INTERACTIVE
+    indicators = get_indicator(source=source, topic=topic, display=False)
     lower = query.lower()
-    return [i for i in indicators if lower in i["name"].lower()]
+    matched = [i for i in indicators if lower in i["name"].lower()]
+    if display:
+        print_ids_and_names(matched)
+    else:
+        return matched
 
 
-def examine(objs):
+def print_ids_and_names(objs):
     """
     Courtesy function to display ids and names from lists returned by wbdata.
     This will mostly be useful in interactive mode.
@@ -299,8 +353,12 @@ def examine(objs):
     except ValueError:
         return
     for i in objs:
-        templ = "{id:" + max_length + "}\t{name}"
-        print(templ.format(**i))
+        try:
+            templ = "{id:" + max_length + "}\t{name}"
+            print(templ.format(**i))
+        except KeyError:
+            templ = "{id:" + max_length + "}\t{value}"
+            print(templ.format(**i))
 
 
 def get_dataframe_from_indicators(indicators, countries="all", aggregates=None,

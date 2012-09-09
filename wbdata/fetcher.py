@@ -64,6 +64,11 @@ class Fetcher(object):
     Bank API
     """
     def __init__(self):
+        self.cache = None
+
+    def __assert_cache(self):  # speeds up initial import
+        if self.cache:
+            return
         try:
             with open(CACHEPATH) as cachefile:
                 self.cache = pickle.load(cachefile)
@@ -78,12 +83,12 @@ class Fetcher(object):
         :cached: use the cache
         :returns: a list of dictionaries containing the response to the query
         """
+        self.__assert_cache()
         if not args:
             args = []
         args.extend([("format", "json"), ("per_page", PER_PAGE)])
         query_url = "?".join((query_url, urlencode(args)))
         logging.debug("Query using {0}".format(query_url))
-        print(query_url)
         if cached and query_url in self.cache:
             results = self.cache[query_url][DATA_IDX]
         else:
@@ -98,6 +103,7 @@ class Fetcher(object):
 
         :age: the max age (in days) of an entry
         """
+        self.__assert_cache()
         min_date = datetime.date.today().toordinal() - 30
         for i in self.cache:
             if self.cache[i][DATE_IDX] < min_date:
@@ -106,6 +112,7 @@ class Fetcher(object):
 
     def sync_cache(self):
         """Sync cache to disk"""
+        self.__assert_cache()
         with open(CACHEPATH, 'wb') as cachefile:
             pickle.dump(self.cache, cachefile,
                         protocol=pickle.HIGHEST_PROTOCOL)
