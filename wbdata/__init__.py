@@ -341,6 +341,30 @@ def search_indicators(query, source=None, topic=None, display=None):
         return matched
 
 
+def search_countries(query, incomelevel=None, lendingtype=None, display=None):
+    """
+    Search countries by name.  Very simple search.
+
+    :query: the string to match against country names
+    :incomelevel: if present, search only the matching incomelevel
+    :lendingtype: if present, search only the matching lendingtype
+    :display: if True,print ids and names instead of returning results.
+        Defaults to True if in interactive prompt, or False otherwise
+    :returns: a list of dictionaries representing countries if display is
+        False
+    """
+    if display is None:
+        display = INTERACTIVE
+    countries = get_country(incomelevel=incomelevel, lendingtype=lendingtype,
+                            display=False)
+    lower = query.lower()
+    matched = [i for i in countries if lower in i["name"].lower()]
+    if display:
+        print_ids_and_names(matched)
+    else:
+        return matched
+
+
 def print_ids_and_names(objs):
     """
     Courtesy function to display ids and names from lists returned by wbdata.
