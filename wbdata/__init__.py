@@ -31,6 +31,7 @@ except ImportError:
 import fetcher
 
 __all__ = ["fetcher"]
+__version__ = "0.0.1"
 INTERACTIVE = sys.__stdin__.isatty()
 BASE_URL = "http://api.worldbank.org"
 COUNTRIES_URL = "{0}/countries".format(BASE_URL)
@@ -91,7 +92,7 @@ def __convert_year_to_datetime(yearstr):
 
 
 def __convert_month_to_datetime(monthstr):
-    split = quarterstr.split("M")
+    split = monthstr.split("M")
     return datetime.datetime(int(split[0]), int(split[1]), 1)
 
 
@@ -116,18 +117,25 @@ def __convert_dates_to_datetime(data, frequency):
     return data
 
 
-def __cast(value):
+def __cast_float(value):
+    """
+    Return a floated value or none
+    """
     try:
         return float(value)
-    except:
+    except ValueError:
         return None
 
 
 def __convert_to_dataframe(data, column_name):
+    """
+    Convert a set of values to a dataframe with columns for country and date
+    """
     __assert_pandas()
     return pd.DataFrame({"country": [i["country"]["value"] for i in data],
                          "date": [i["date"] for i in data],
-                         column_name: [__cast(i["value"]) for i in data]})
+                         column_name: [__cast_float(i["value"]) for i in data]
+                         })
 
 
 def get_data(indicator, countries="all", aggregates=None, data_date=None,
@@ -406,11 +414,12 @@ def get_dataframe_from_indicators(indicators, countries="all", aggregates=None,
 
     """
     __assert_pandas()
-    for i, indicator in enumerate(indicators.keys()):
+    merged = None
+    for indicator in indicators:
         indic_df = get_data(indicator, countries, aggregates, data_date, mrv,
                             gapfill, frequency, convert_date, pandas=True,
                             column_name=indicators[indicator])
-        if i:
+        if merged:
             merged = merged.merge(indic_df, on=["country", "date"])
         else:
             merged = indic_df
