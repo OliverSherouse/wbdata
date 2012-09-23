@@ -28,7 +28,7 @@ try:
 except ImportError:
     pd = None
 
-import fetcher
+from wbdata import fetcher
 
 __all__ = ["fetcher"]
 __version__ = "0.0.1"
@@ -46,64 +46,86 @@ FETCHER = fetcher.Fetcher()
 
 
 def __assert_pandas():
+    """Raise ValueError if pandas is not loaded"""
     if not pd:
         raise ValueError("Pandas must be installed to be used")
 
 
 def __parse_value_or_iterable(arg):
+    """
+    If arg is a single value, return it as a string; if an iterable, return
+    a ;-joined string of all values
+    """
     if type(arg) in (int, str, unicode):
         return str(arg)
     return ";".join(arg)
 
 
-def __parse_monthly_date(data_date):
+def __format_monthly_date(data_date):
+    """Return a %YM%m formatted string from a datetime.datetime object"""
     return data_date.strftime("%YM%m")
 
 
-def __parse_quarterly_date(data_date):
+def __format_quarterly_date(data_date):
+    """Return a %YQ# formatted string from  a datetime.date object """
     return "{0}Q{1}".format(data_date.year, data_date.month // 4 + 1)
 
 
-def __parse_yearly_date(data_date):
+def __format_yearly_date(data_date):
+    """Return a %Y formatted string from a datetime.date object"""
     return data_date.strftime("%Y")
 
 
-def __parse_data_date(frequency, data_date):
+def __format_data_date(frequency, data_date):
+    """
+    Return a formatted string according to the desired frequency from the
+    data_date object
+    """
     if isinstance(data_date, datetime.date):
         try:
-            return {"M": __parse_monthly_date,
-                    "Q": __parse_quarterly_date,
-                    "Y": __parse_yearly_date}[frequency](data_date)
+            return {"M": __format_monthly_date,
+                    "Q": __format_quarterly_date,
+                    "Y": __format_yearly_date}[frequency](data_date)
         except KeyError:
             raise ValueError("Bad Frequency")
     elif len(data_date) == 2:
         try:
-            parser = {"M": __parse_monthly_date,
-                      "Q": __parse_quarterly_date,
-                      "Y": __parse_yearly_date}[frequency]
-            return ":".join((parser(data_date[0]), parser(data_date[1])))
+            formatter = {"M": __format_monthly_date,
+                         "Q": __format_quarterly_date,
+                         "Y": __format_yearly_date}[frequency]
+            return ":".join((formatter(data_date[0]), formatter(data_date[1])))
         except KeyError:
             raise ValueError("Bad Frequency")
     raise TypeError("Bad data_date")
 
 
 def __convert_year_to_datetime(yearstr):
+    """return datetime.datetime object from %Y formatted string"""
     return datetime.datetime.strptime(yearstr, "%Y")
 
 
 def __convert_month_to_datetime(monthstr):
+    """return datetime.datetime object from %YM%m formatted string"""
     split = monthstr.split("M")
     return datetime.datetime(int(split[0]), int(split[1]), 1)
 
 
 def __convert_quarter_to_datetime(quarterstr):
+    """
+    return datetime.datetime object from %YQ%# formatted string, where # is
+    the desired quarter
+    """
     split = quarterstr.split("Q")
     quarter = int(split[1])
     month = quarter * 3 - 2
     return datetime.datetime(int(split[0]), month, 1)
 
 
-def __convert_dates_to_datetime(data, frequency):
+def __convert_dates_to_datetime(data):
+    """
+    Return a datetime.datetime object from a date string as provided by the
+    World Bank
+    """
     first = data[0]['date']
     if "M" in first:
         converter = __convert_month_to_datetime
@@ -138,15 +160,14 @@ def __convert_to_dataframe(data, column_name):
                          })
 
 
-def get_data(indicator, countries="all", aggregates=None, data_date=None,
-             mrv=None, gapfill=None, frequency=None, convert_date=True,
-             pandas=False, column_name="value"):
+def get_data(indicator, countries="all", data_date=None, mrv=None,
+             gapfill=None, frequency=None, convert_date=True, pandas=False,
+             column_name="value"):
     """
     Retrieve indicators for given countries and years
 
     :indicator: the desired indicator code
     :countries: a country code, sequence of country codes, or "all" (default)
-    :aggregates: the regional or aggregate code, or sequence thereof
     :date: the desired date as a datetime object or a 2-sequence with
         start and end dates
     :mrv: the number of most recent values to retrieve
@@ -158,22 +179,14 @@ def get_data(indicator, countries="all", aggregates=None, data_date=None,
     :returns: list of dictionaries or pandas DataFrame
     """
     query_url = COUNTRIES_URL
-    if aggregates:
-        if countries != "all":
-            raise ValueError("Cannot Specify both countries and aggregates")
-        try:
-            c_part = __parse_value_or_iterable(aggregates)
-        except TypeError:
-            raise TypeError("aggregates must be a string, iterable, or None")
-    else:
-        try:
-            c_part = __parse_value_or_iterable(countries)
-        except TypeError:
-            raise TypeError("'countries' must be a string or iterable'")
+    try:
+        c_part = __parse_value_or_iterable(countries)
+    except TypeError:
+        raise TypeError("'countries' must be a string or iterable'")
     query_url = "/".join((query_url, c_part, "indicators", indicator))
     args = []
     if data_date:
-        args.append(("date", __parse_data_date(frequency, data_date)))
+        args.append(("date", __format_data_date(frequency, data_date)))
     if mrv:
         args.append(("MRV", mrv))
     if gapfill:
@@ -185,13 +198,22 @@ def get_data(indicator, countries="all", aggregates=None, data_date=None,
             raise ValueError("Bad Frequency")
     data = FETCHER.fetch(query_url, args)
     if convert_date:
-        data = __convert_dates_to_datetime(data, frequency)
+        data = __convert_dates_to_datetime(data)
     if pandas:
         return __convert_to_dataframe(data, column_name)
     return data
 
 
 def __id_only_query(query_url, id_or_ids, display):
+    """
+    Retrieve information when ids are the only arguments
+
+    :query_url: the base url to use for the query
+    :id_or_ids: an id number or sequence thereof.  None returns all sources
+    :display: if True,print ids and names instead of returning results.
+        Defaults to True if in interactive prompt, or False otherwise
+    :returns: if display is False, a dictionary describing a source
+    """
     if display is None:
         display = INTERACTIVE
     if id_or_ids:
@@ -393,9 +415,9 @@ def print_ids_and_names(objs):
             print(templ.format(**i))
 
 
-def get_dataframe_from_indicators(indicators, countries="all", aggregates=None,
-                                  data_date=None, mrv=None, gapfill=None,
-                                  frequency=None, convert_date=True):
+def get_dataframe_from_indicators(indicators, countries="all", data_date=None,
+                                  mrv=None, gapfill=None, frequency=None,
+                                  convert_date=True):
     """
     Convenience function to download a set of indicators and merge them into
     a pandas dataframe on the 'country' and 'date' columns.
@@ -403,7 +425,6 @@ def get_dataframe_from_indicators(indicators, countries="all", aggregates=None,
     :indicators: An dictionary where the keys are desired indicators and the
         values are the desired column names
     :countries: a country code, sequence of country codes, or "all" (default)
-    :aggregates: the regional or aggregate code, or sequence thereof
     :data_date: the desired date as a datetime object or a 2-sequence with
         start and end dates
     :mrv: the number of most recent values to retrieve
@@ -416,7 +437,7 @@ def get_dataframe_from_indicators(indicators, countries="all", aggregates=None,
     __assert_pandas()
     merged = None
     for indicator in indicators:
-        indic_df = get_data(indicator, countries, aggregates, data_date, mrv,
+        indic_df = get_data(indicator, countries, data_date, mrv,
                             gapfill, frequency, convert_date, pandas=True,
                             column_name=indicators[indicator])
         if merged:
