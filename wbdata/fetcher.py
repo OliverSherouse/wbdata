@@ -28,11 +28,15 @@ import time
 
 try:  # python 2
     import cPickle as pickle
-    from urllib2 import urlopen
+
     from urllib import urlencode
+    from urllib2 import URLError
+    from urllib2 import urlopen
 except ImportError:  # python 3
     import pickle
+
     from urllib.request import urlopen
+    from urlllib.error import URLError
     from urlllib.parse import urlencode
 
 # Inspiration for below from Trent Mick and Sridhar Ratnakumar
@@ -125,8 +129,11 @@ class Fetcher(object):
                     response = json.load(query)
                     query.close()
                     break
-                except StandardError as e:
+                except ValueError:
+                    raise ValueError("Could not read response. Bad request?")
+                except URLError as e:
                     if thistry < TRIES:
+                        thistry += 1
                         continue
                     else:
                         raise e

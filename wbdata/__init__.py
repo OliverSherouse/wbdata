@@ -35,7 +35,9 @@ __all__ = ["get_data", "get_source", "get_incomelevel", "get_topic",
            "search_indicators", "search_countries", "print_ids_and_names",
            "get_dataframe_from_indicators", "fetcher"]
 __version__ = "0.0.1"
-INTERACTIVE = sys.__stdin__.isatty()
+import __main__ as main
+INTERACTIVE = not hasattr(main, "__file__")
+del(main)
 BASE_URL = "http://api.worldbank.org"
 COUNTRIES_URL = "{0}/countries".format(BASE_URL)
 ILEVEL_URL = "{0}/incomeLevels".format(BASE_URL)
@@ -208,20 +210,21 @@ def get_data(indicator, countries="all", data_date=None, mrv=None,
     return data
 
 
-def __id_only_query(query_url, id_or_ids, display):
+def __id_only_query(query_url, query_id, display):
     """
     Retrieve information when ids are the only arguments
 
     :query_url: the base url to use for the query
-    :id_or_ids: an id number or sequence thereof.  None returns all sources
+    :query_id: an id number.  None returns all sources
     :display: if True,print ids and names instead of returning results.
         Defaults to True if in interactive prompt, or False otherwise
     :returns: if display is False, a dictionary describing a source
     """
     if display is None:
         display = INTERACTIVE
-    if id_or_ids:
-        query_url = "/".join((query_url, __parse_value_or_iterable(id_or_ids)))
+    if query_id:
+        #query_url = "/".join((query_url, __parse_value_or_iterable(query_id)))
+        query_url = "/".join((query_url, str(query_id)))
     results = FETCHER.fetch(query_url)
     if display:
         print_ids_and_names(results)
@@ -233,7 +236,7 @@ def get_source(source_id=None, display=None):
     """
     Retrieve information on a source
 
-    :source_id: an id number or sequence thereof.  None returns all sources
+    :source_id: an id number .  None returns all sources
     :display: if True,print ids and names instead of returning results.
         Defaults to True if in interactive prompt, or False otherwise
     :returns: if display is False, a dictionary describing a source
@@ -245,8 +248,7 @@ def get_incomelevel(level_id=None, display=None):
     """
     Retrieve information on an income level aggregate
 
-    :level_id: an id number or sequence thereof.  None returns all income level
-        aggregates
+    :level_id: an id number.  None returns all income level aggregates
     :display: if True,print ids and names instead of returning results.
         Defaults to True if in interactive prompt, or False otherwise
     :returns: if display is False a dictionary describing an income level
@@ -259,7 +261,7 @@ def get_topic(topic_id=None, display=None):
     """
     Retrieve information on a topic
 
-    :topic_id: an id number or sequence thereof.  None returns all topics
+    :topic_id: an id number.  None returns all topics
     :display: if True,print ids and names instead of returning results.
         Defaults to True if in interactive prompt, or False otherwise
     :returns: if display is False, a dictionary describing an income level
@@ -272,8 +274,7 @@ def get_lendingtype(type_id=None, display=None):
     """
     Retrieve information on an income level aggregate
 
-    :level_id: an id number or sequence thereof.  None returns all lending type
-        aggregates
+    :level_id: an id number.  None returns all lending type aggregates
     :display: if True,print ids and names instead of returning results.
         Defaults to True if in interactive prompt, or False otherwise
     :returns: if display is False, a dictionary describing an lending type
@@ -288,14 +289,13 @@ def get_country(country_id=None, incomelevel=None, lendingtype=None,
     Retrieve information on a country or regional aggregate.  Can specify
     either country_id, or the aggregates, but not both
 
-    :country_id: an id or sequence thereof.  None returns all countries and
-        aggregates.  incomelevel and lendingtype are mutually exclusive
-    :incomelevel: desired incomelevel id or ids
-    :lendingtype: desired lendingtype id or ids
+    :country_id: desired country id. None returns all countries and aggregates.
+    :incomelevel: desired incomelevel id or ids.
+    :lendingtype: desired lendingtype id or ids.
     :display: if True,print ids and names instead of returning results.
-        Defaults to True if in interactive prompt, or False otherwise
+        Defaults to True if in interactive prompt, or False otherwise.
     :returns: if display is False, a dictionary describing an lending type
-        aggregate
+        aggregate.
     """
     if display is None:
         display = INTERACTIVE
