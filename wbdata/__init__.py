@@ -30,7 +30,10 @@ except ImportError:
 
 from wbdata import fetcher
 
-__all__ = ["fetcher"]
+__all__ = ["get_data", "get_source", "get_incomelevel", "get_topic",
+           "get_lendingtype", "get_country", "get_indicator",
+           "search_indicators", "search_countries", "print_ids_and_names",
+           "get_dataframe_from_indicators", "fetcher"]
 __version__ = "0.0.1"
 INTERACTIVE = sys.__stdin__.isatty()
 BASE_URL = "http://api.worldbank.org"
@@ -186,7 +189,8 @@ def get_data(indicator, countries="all", data_date=None, mrv=None,
     query_url = "/".join((query_url, c_part, "indicators", indicator))
     args = []
     if data_date:
-        args.append(("date", __format_data_date(frequency, data_date)))
+        datefreq = frequency if frequency else "Y"
+        args.append(("date", __format_data_date(datefreq, data_date)))
     if mrv:
         args.append(("MRV", mrv))
     if gapfill:
@@ -425,6 +429,7 @@ def get_dataframe_from_indicators(indicators, countries="all", data_date=None,
     :indicators: An dictionary where the keys are desired indicators and the
         values are the desired column names
     :countries: a country code, sequence of country codes, or "all" (default)
+    :aggregates: the regional or aggregate code, or sequence thereof
     :data_date: the desired date as a datetime object or a 2-sequence with
         start and end dates
     :mrv: the number of most recent values to retrieve
@@ -440,7 +445,7 @@ def get_dataframe_from_indicators(indicators, countries="all", data_date=None,
         indic_df = get_data(indicator, countries, data_date, mrv,
                             gapfill, frequency, convert_date, pandas=True,
                             column_name=indicators[indicator])
-        if merged:
+        if merged is not None:
             merged = merged.merge(indic_df, on=["country", "date"])
         else:
             merged = indic_df

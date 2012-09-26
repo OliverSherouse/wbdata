@@ -58,34 +58,6 @@ DATA_IDX = 1
 TRIES = 5
 
 
-def __get_paged_data(query_url):
-    """Page through results returned by query_url to return a single list"""
-    results = []
-    original_url = query_url
-    while 1:
-        thistry = 0
-        while 1:
-            try:
-                query = urlopen(query_url)
-                response = json.load(query)
-                query.close()
-                break
-            except StandardError as e:
-                if thistry < TRIES:
-                    continue
-                else:
-                    raise e
-        results.extend(response[1])
-        this_page = response[0]['page']
-        pages = response[0]['pages']
-        logging.debug("Processed page {0} of {1}".format(this_page, pages))
-        if this_page == pages:
-            break
-        query_url = original_url + "&page={0}".format(int(this_page + 1))
-        time.sleep(1)
-    return results
-
-
 class Fetcher(object):
     """
     An object with a cache to retrieve and page responses from the World
@@ -121,7 +93,7 @@ class Fetcher(object):
         if cached and query_url in self.cache:
             results = self.cache[query_url][DATA_IDX]
         else:
-            results = __get_paged_data(query_url)
+            results = self.__get_paged_data(query_url)
             self.cache[query_url] = (datetime.date.today().toordinal(),
                                      results)
             self.sync_cache()
@@ -138,6 +110,35 @@ class Fetcher(object):
             if self.cache[i][DATE_IDX] < min_date:
                 del(self.cache[i])
         self.sync_cache()
+
+    def __get_paged_data(self, query_url):
+        """
+        Page through results returned by query_url to return a single list
+        """
+        results = []
+        original_url = query_url
+        while 1:
+            thistry = 0
+            while 1:
+                try:
+                    query = urlopen(query_url)
+                    response = json.load(query)
+                    query.close()
+                    break
+                except StandardError as e:
+                    if thistry < TRIES:
+                        continue
+                    else:
+                        raise e
+            results.extend(response[1])
+            this_page = response[0]['page']
+            pages = response[0]['pages']
+            logging.debug("Processed page {0} of {1}".format(this_page, pages))
+            if this_page == pages:
+                break
+            query_url = original_url + "&page={0}".format(int(this_page + 1))
+            time.sleep(1)
+        return results
 
     def sync_cache(self):
         """Sync cache to disk"""
