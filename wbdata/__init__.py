@@ -30,8 +30,8 @@ except ImportError:
 
 from wbdata import fetcher
 
-__all__ = ["get_data", "get_source", "get_incomelevel", "get_topic",
-           "get_lendingtype", "get_country", "get_indicator",
+__all__ = ["get_data", "get_country", "get_source", "get_indicator",
+           "get_incomelevel", "get_topic", "get_lendingtype",
            "search_indicators", "search_countries", "print_ids_and_names",
            "get_dataframe_from_indicators", "fetcher"]
 __version__ = "0.0.1"
@@ -48,6 +48,7 @@ TOPIC_URL = "{0}/topics".format(BASE_URL)
 INDIC_ERROR = "Cannot specify more than one of indicator, source, and topic"
 
 FETCHER = fetcher.Fetcher()
+#TODO: Restore ability to do multiple ids for get_* queries
 
 
 def __assert_pandas():
@@ -165,14 +166,14 @@ def __convert_to_dataframe(data, column_name):
                          })
 
 
-def get_data(indicator, countries="all", data_date=None, mrv=None,
+def get_data(indicator, country="all", data_date=None, mrv=None,
              gapfill=None, frequency=None, convert_date=True, pandas=False,
              column_name="value"):
     """
     Retrieve indicators for given countries and years
 
     :indicator: the desired indicator code
-    :countries: a country code, sequence of country codes, or "all" (default)
+    :country: a country code, sequence of country codes, or "all" (default)
     :date: the desired date as a datetime object or a 2-sequence with
         start and end dates
     :mrv: the number of most recent values to retrieve
@@ -185,9 +186,9 @@ def get_data(indicator, countries="all", data_date=None, mrv=None,
     """
     query_url = COUNTRIES_URL
     try:
-        c_part = __parse_value_or_iterable(countries)
+        c_part = __parse_value_or_iterable(country)
     except TypeError:
-        raise TypeError("'countries' must be a string or iterable'")
+        raise TypeError("'country' must be a string or iterable'")
     query_url = "/".join((query_url, c_part, "indicators", indicator))
     args = []
     if data_date:

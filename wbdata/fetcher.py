@@ -95,11 +95,11 @@ class Fetcher(object):
         query_url = "?".join((query_url, urlencode(args)))
         logging.debug("Query using {0}".format(query_url))
         if cached and query_url in self.cache:
-            results = self.cache[query_url][DATA_IDX]
+            results = json.loads(self.cache[query_url][DATA_IDX])
         else:
             results = self.__get_paged_data(query_url)
             self.cache[query_url] = (datetime.date.today().toordinal(),
-                                     results)
+                                     json.dumps(results))
             self.sync_cache()
         return results
 
