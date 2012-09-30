@@ -9,7 +9,33 @@ import wbdata
 
 from tests import strings
 
-#logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.DEBUG)
+
+
+class TestSimpleQueries(unittest.TestCase):
+    def testGetAllIncomeLevels(self):
+        wbdata.get_incomelevel()
+
+    def testOneIncomeLevel(self):
+        wbdata.get_incomelevel("OEC")
+
+    def testGetAllLendingTypes(self):
+        wbdata.get_lendingtype()
+
+    def testOneIncomeLevel(self):
+        wbdata.get_lendingtype("IBD")
+
+    def testGetAllSources(self):
+        wbdata.get_source()
+
+    def testOneSource(self):
+        wbdata.get_source(31)
+
+    def testGetAllTopics(self):
+        wbdata.get_source()
+
+    def testOneTopic(self):
+        wbdata.get_source("3")
 
 
 class GetCountryTestCase(unittest.TestCase):
@@ -67,30 +93,14 @@ class TestGetIndicator(unittest.TestCase):
         wbdata.get_indicator(source="1", topic=1)
 
 
-class TestSimpleQueries(unittest.TestCase):
-    def testGetAllIncomeLevels(self):
-        wbdata.get_incomelevel()
+class TestGetData(unittest.TestCase):
+    def testIndicator(self):
+        wbdata.get_data("SH.XPD.PRIV.ZS")
 
-    def testOneIncomeLevel(self):
-        wbdata.get_incomelevel("OEC")
+    def testOneCountry(self):
+        wbdata.get_data("SH.XPD.PRIV.ZS", country="USA")
 
-    def testGetAllLendingTypes(self):
-        wbdata.get_lendingtype()
-
-    def testOneIncomeLevel(self):
-        wbdata.get_lendingtype("IBD")
-
-    def testGetAllSources(self):
-        wbdata.get_source()
-
-    def testOneSource(self):
-        wbdata.get_source(31)
-
-    def testGetAllTopics(self):
-        wbdata.get_source()
-
-    def testOneTopic(self):
-        wbdata.get_source("3")
-
+    def testTwoCountries(self):
+        wbdata.get_data("SH.XPD.PRIV.ZS", country=("chn", "bra"))
 if __name__ == '__main__':
     unittest.main()
