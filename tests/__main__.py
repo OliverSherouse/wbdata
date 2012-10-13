@@ -9,7 +9,7 @@ import wbdata
 
 from tests import strings
 
-logging.basicConfig(level=logging.DEBUG)
+#logging.basicConfig(level=logging.DEBUG)
 
 
 class TestSimpleQueries(unittest.TestCase):
@@ -102,5 +102,15 @@ class TestGetData(unittest.TestCase):
 
     def testTwoCountries(self):
         wbdata.get_data("SH.XPD.PRIV.ZS", country=("chn", "bra"))
+
+
+class TestSearchFunctions(unittest.TestCase):
+    def testSearchCountry(self):
+        wbdata.search_indicators("United", display=True)
+
+    def testSearchCountry(self):
+        wbdata.search_indicators("gdp", display=True)
+
+
 if __name__ == '__main__':
     unittest.main()
