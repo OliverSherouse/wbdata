@@ -133,6 +133,8 @@ def __convert_dates_to_datetime(data):
     World Bank
     """
     first = data[0]['date']
+    if type(first) == datetime.datetime:
+        return data
     if "M" in first:
         converter = __convert_month_to_datetime
     elif "Q" in first:
