@@ -26,6 +26,8 @@ import os
 import sys
 import time
 
+#TODO: Get rid of the json conversion for caching.  It ruins everything.
+
 try:  # python 2
     import cPickle as pickle
 
@@ -88,19 +90,15 @@ class Fetcher(object):
         :cached: use the cache
         :returns: a list of dictionaries containing the response to the query
         """
-        self.__assert_cache()
         if not args:
             args = []
         args.extend([("format", "json"), ("per_page", PER_PAGE)])
         query_url = "?".join((query_url, urlencode(args)))
         logging.debug("Query using {0}".format(query_url))
-        if cached and query_url in self.cache:
-            results = json.loads(self.cache[query_url][DATA_IDX])
-        else:
-            results = self.__get_paged_data(query_url)
-            self.cache[query_url] = (datetime.date.today().toordinal(),
-                                     json.dumps(results))
-            self.sync_cache()
+        results = self.__get_paged_data(query_url, cached)
+        for i in results:
+            if "id" in i:
+                i['id'] = i['id'].strip()
         return results
 
     def prune(self, age=30):
@@ -115,28 +113,25 @@ class Fetcher(object):
                 del(self.cache[i])
         self.sync_cache()
 
-    def __get_paged_data(self, query_url):
+    def __get_paged_data(self, query_url, cached):
         """
         Page through results returned by query_url to return a single list
         """
+        # TODO: This is a monster: break it up
+        self.__assert_cache()
         results = []
         original_url = query_url
         while 1:
-            thistry = 0
-            while 1:
-                try:
-                    query = urlopen(query_url)
-                    response = json.load(query)
-                    query.close()
-                    break
-                except ValueError:
-                    raise ValueError("Could not read response. Bad request?")
-                except URLError as e:
-                    if thistry < TRIES:
-                        thistry += 1
-                        continue
-                    else:
-                        raise e
+            if cached and query_url in self.cache:
+                response = self.cache[query_url]
+            else:
+                response = self.__retrieve_url(query_url)
+                self.cache[query_url] = response
+                self.sync_cache()
+            response = json.loads(response)
+            if response is None:
+                raise Exception(
+                    "Got no response from query {0}".format(query_url))
             results.extend(response[1])
             this_page = response[0]['page']
             pages = response[0]['pages']
@@ -146,6 +141,23 @@ class Fetcher(object):
             query_url = original_url + "&page={0}".format(int(this_page + 1))
             time.sleep(1)
         return results
+
+    def __retrieve_url(self, url):
+        thistry = 0
+        while 1:
+            try:
+                query = urlopen(url)
+                response = query.read()
+                query.close()
+                break
+            except URLError as e:
+                if thistry < TRIES:
+                    thistry += 1
+                    continue
+                else:
+                    print(url)
+                    raise e
+        return response
 
     def sync_cache(self):
         """Sync cache to disk"""
