@@ -133,8 +133,6 @@ def __convert_dates_to_datetime(data):
     World Bank
     """
     first = data[0]['date']
-    if type(first) == datetime.datetime:
-        return data
     if "M" in first:
         converter = __convert_month_to_datetime
     elif "Q" in first:
@@ -143,7 +141,13 @@ def __convert_dates_to_datetime(data):
         converter = __convert_year_to_datetime
 
     for datum in data:
-        datum['date'] = converter(datum['date'])
+        datum_date = datum['date']
+        if "MRV" in datum_date:
+            continue
+        if "-" in datum_date:
+            continue
+        datum['date'] = converter(datum_date)
+
     return data
 
 
@@ -154,6 +158,8 @@ def __cast_float(value):
     try:
         return float(value)
     except ValueError:
+        return None
+    except TypeError:
         return None
 
 
@@ -350,7 +356,7 @@ def get_indicator(indicator=None, source=None, topic=None, display=None):
     if display:
         print_ids_and_names(results)
     else:
-        return(results)
+        return results
 
 
 def search_indicators(query, source=None, topic=None, display=None):
