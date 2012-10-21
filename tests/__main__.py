@@ -2,6 +2,7 @@
 
 import json
 import logging
+import random
 import unittest
 
 import pandas
@@ -111,6 +112,19 @@ class TestSearchFunctions(unittest.TestCase):
     def testSearchCountry(self):
         wbdata.search_indicators("gdp", display=True)
 
+class TestGetDataframe(unittest.TestCase):
+    def setUp(self):
+        indicators = random.sample([i['id'] for i in wbdata.get_indicator()],
+                                   15)
+        self.indicators = {}
+        for i, indic in enumerate(indicators):
+            self.indicators [indic] = "label{0}".format(i)
+            
+    def test_countries(self):
+        all_countries = wbdata.get_country(display = False)
+        countries = random.sample([i['id'] for i in all_countries], 5)
+        df = wbdata.get_dataframe_from_indicators(self.indicators,
+                                                  countries=countries)
 
 if __name__ == '__main__':
     unittest.main()
