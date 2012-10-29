@@ -29,6 +29,7 @@ except ImportError:
     pd = None
 
 from wbdata import fetcher
+from decorator import decorator
 
 __all__ = ["get_data", "get_country", "get_source", "get_indicator",
            "get_incomelevel", "get_topic", "get_lendingtype",
@@ -51,10 +52,12 @@ FETCHER = fetcher.Fetcher()
 #TODO: Restore ability to do multiple ids for get_* queries
 
 
-def __assert_pandas():
+@decorator
+def pandas(f, *args, **kwargs):
     """Raise ValueError if pandas is not loaded"""
     if not pd:
         raise ValueError("Pandas must be installed to be used")
+    return f(*args, **kwargs)
 
 
 def __parse_value_or_iterable(arg):
@@ -163,11 +166,11 @@ def __cast_float(value):
         return None
 
 
+@pandas
 def __convert_to_dataframe(data, column_name):
     """
     Convert a set of values to a dataframe with columns for country and date
     """
-    __assert_pandas()
     return pd.DataFrame({"country": [i["country"]["value"] for i in data],
                          "date": [i["date"] for i in data],
                          column_name: [__cast_float(i["value"]) for i in data]
@@ -175,7 +178,7 @@ def __convert_to_dataframe(data, column_name):
 
 
 def get_data(indicator, country="all", data_date=None, mrv=None,
-             gapfill=None, frequency=None, convert_date=True, pandas=False,
+             gapfill=None, frequency=None, convert_date=False, pandas=False,
              column_name="value"):
     """
     Retrieve indicators for given countries and years
@@ -428,9 +431,10 @@ def print_ids_and_names(objs):
             print(templ.format(**i))
 
 
+@pandas
 def get_dataframe_from_indicators(indicators, countries="all", data_date=None,
                                   mrv=None, gapfill=None, frequency=None,
-                                  convert_date=True):
+                                  convert_date=False):
     """
     Convenience function to download a set of indicators and merge them into
     a pandas dataframe on the 'country' and 'date' columns.
@@ -448,7 +452,6 @@ def get_dataframe_from_indicators(indicators, countries="all", data_date=None,
     :returns: a pandas dataframe
 
     """
-    __assert_pandas()
     merged = None
     for indicator in indicators:
         indic_df = get_data(indicator, countries, data_date, mrv,
