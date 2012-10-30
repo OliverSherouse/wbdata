@@ -26,8 +26,6 @@ import os
 import sys
 import time
 
-#TODO: Get rid of the json conversion for caching.  It ruins everything.
-
 try:  # python 2
     import cPickle as pickle
 
