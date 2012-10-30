@@ -177,9 +177,8 @@ def __convert_to_dataframe(data, column_name):
                          })
 
 
-def get_data(indicator, country="all", data_date=None, mrv=None,
-             gapfill=None, frequency=None, convert_date=False, pandas=False,
-             column_name="value"):
+def get_data(indicator, country="all", data_date=None, convert_date=False,
+             pandas=False, column_name="value"):
     """
     Retrieve indicators for given countries and years
 
@@ -187,9 +186,6 @@ def get_data(indicator, country="all", data_date=None, mrv=None,
     :country: a country code, sequence of country codes, or "all" (default)
     :date: the desired date as a datetime object or a 2-sequence with
         start and end dates
-    :mrv: the number of most recent values to retrieve
-    :gapfill: with mrv, fills gaps with the most recent values
-    :frequency: 'Q', 'M', or 'Y' for units with mrv
     :convert_date: if True, convert date field to a datetime.datetime object.
     :pandas: if True, return results as a pandas DataFrame
     :column_name: the desired name for the pandas column
@@ -205,15 +201,6 @@ def get_data(indicator, country="all", data_date=None, mrv=None,
     if data_date:
         datefreq = frequency if frequency else "Y"
         args.append(("date", __format_data_date(datefreq, data_date)))
-    if mrv:
-        args.append(("MRV", mrv))
-    if gapfill:
-        args.append(("Gapfill", "Y"))
-    if frequency:
-        if frequency in ("M", "Q", "Y"):
-            args.append(("frequency", frequency))
-        else:
-            raise ValueError("Bad Frequency")
     data = FETCHER.fetch(query_url, args)
     if convert_date:
         data = __convert_dates_to_datetime(data)
@@ -433,7 +420,6 @@ def print_ids_and_names(objs):
 
 @pandas
 def get_dataframe_from_indicators(indicators, countries="all", data_date=None,
-                                  mrv=None, gapfill=None, frequency=None,
                                   convert_date=False):
     """
     Convenience function to download a set of indicators and merge them into
@@ -445,9 +431,6 @@ def get_dataframe_from_indicators(indicators, countries="all", data_date=None,
     :aggregates: the regional or aggregate code, or sequence thereof
     :data_date: the desired date as a datetime object or a 2-sequence with
         start and end dates
-    :mrv: the number of most recent values to retrieve
-    :gapfill: with mrv, fills gaps with the most recent values
-    :frequency: 'Q', 'M', or 'Y' for units with mrv
     :convert_date: if True, convert date field to a datetime.datetime object.
     :returns: a pandas dataframe
 
