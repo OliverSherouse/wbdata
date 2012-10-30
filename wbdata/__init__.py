@@ -49,11 +49,10 @@ TOPIC_URL = "{0}/topics".format(BASE_URL)
 INDIC_ERROR = "Cannot specify more than one of indicator, source, and topic"
 
 FETCHER = fetcher.Fetcher()
-#TODO: Restore ability to do multiple ids for get_* queries
 
 
 @decorator
-def pandas(f, *args, **kwargs):
+def uses_pandas(f, *args, **kwargs):
     """Raise ValueError if pandas is not loaded"""
     if not pd:
         raise ValueError("Pandas must be installed to be used")
@@ -68,44 +67,6 @@ def __parse_value_or_iterable(arg):
     if type(arg) in (int, str, unicode):
         return str(arg)
     return ";".join(arg)
-
-
-def __format_monthly_date(data_date):
-    """Return a %YM%m formatted string from a datetime.datetime object"""
-    return data_date.strftime("%YM%m")
-
-
-def __format_quarterly_date(data_date):
-    """Return a %YQ# formatted string from  a datetime.date object """
-    return "{0}Q{1}".format(data_date.year, data_date.month // 4 + 1)
-
-
-def __format_yearly_date(data_date):
-    """Return a %Y formatted string from a datetime.date object"""
-    return data_date.strftime("%Y")
-
-
-def __format_data_date(frequency, data_date):
-    """
-    Return a formatted string according to the desired frequency from the
-    data_date object
-    """
-    if isinstance(data_date, datetime.date):
-        try:
-            return {"M": __format_monthly_date,
-                    "Q": __format_quarterly_date,
-                    "Y": __format_yearly_date}[frequency](data_date)
-        except KeyError:
-            raise ValueError("Bad Frequency")
-    elif len(data_date) == 2:
-        try:
-            formatter = {"M": __format_monthly_date,
-                         "Q": __format_quarterly_date,
-                         "Y": __format_yearly_date}[frequency]
-            return ":".join((formatter(data_date[0]), formatter(data_date[1])))
-        except KeyError:
-            raise ValueError("Bad Frequency")
-    raise TypeError("Bad data_date")
 
 
 def __convert_year_to_datetime(yearstr):
@@ -166,7 +127,7 @@ def __cast_float(value):
         return None
 
 
-@pandas
+@uses_pandas
 def __convert_to_dataframe(data, column_name):
     """
     Convert a set of values to a dataframe with columns for country and date
@@ -199,8 +160,7 @@ def get_data(indicator, country="all", data_date=None, convert_date=False,
     query_url = "/".join((query_url, c_part, "indicators", indicator))
     args = []
     if data_date:
-        datefreq = frequency if frequency else "Y"
-        args.append(("date", __format_data_date(datefreq, data_date)))
+        args.append("date", data_date.strftime("%YM%m"))
     data = FETCHER.fetch(query_url, args)
     if convert_date:
         data = __convert_dates_to_datetime(data)
@@ -222,8 +182,7 @@ def __id_only_query(query_url, query_id, display):
     if display is None:
         display = INTERACTIVE
     if query_id:
-        #query_url = "/".join((query_url, __parse_value_or_iterable(query_id)))
-        query_url = "/".join((query_url, str(query_id)))
+        query_url = "/".join((query_url, __parse_value_or_iterable(query_id)))
     results = FETCHER.fetch(query_url)
     if display:
         print_ids_and_names(results)
@@ -235,7 +194,7 @@ def get_source(source_id=None, display=None):
     """
     Retrieve information on a source
 
-    :source_id: an id number .  None returns all sources
+    :source_id: a source id or sequence thereof.  None returns all sources
     :display: if True,print ids and names instead of returning results.
         Defaults to True if in interactive prompt, or False otherwise
     :returns: if display is False, a dictionary describing a source
@@ -247,7 +206,8 @@ def get_incomelevel(level_id=None, display=None):
     """
     Retrieve information on an income level aggregate
 
-    :level_id: an id number.  None returns all income level aggregates
+    :level_id: a level id or sequence thereof.  None returns all income level
+        aggregates
     :display: if True,print ids and names instead of returning results.
         Defaults to True if in interactive prompt, or False otherwise
     :returns: if display is False a dictionary describing an income level
@@ -260,7 +220,7 @@ def get_topic(topic_id=None, display=None):
     """
     Retrieve information on a topic
 
-    :topic_id: an id number.  None returns all topics
+    :topic_id: a topic id or sequence thereof.  None returns all topics
     :display: if True,print ids and names instead of returning results.
         Defaults to True if in interactive prompt, or False otherwise
     :returns: if display is False, a dictionary describing an income level
@@ -273,9 +233,10 @@ def get_lendingtype(type_id=None, display=None):
     """
     Retrieve information on an income level aggregate
 
-    :level_id: an id number.  None returns all lending type aggregates
-    :display: if True,print ids and names instead of returning results.
-        Defaults to True if in interactive prompt, or False otherwise
+    :level_id: lending type id or sequence thereof.  None returns all lending
+        type aggregates
+    :display: if True,print ids and names instead of returning
+        results. Defaults to True if in interactive prompt, or False otherwise
     :returns: if display is False, a dictionary describing an lending type
         aggregate
     """
@@ -288,7 +249,8 @@ def get_country(country_id=None, incomelevel=None, lendingtype=None,
     Retrieve information on a country or regional aggregate.  Can specify
     either country_id, or the aggregates, but not both
 
-    :country_id: desired country id. None returns all countries and aggregates.
+    :country_id: a country id or sequence thereof. None returns all countries
+        and aggregates.
     :incomelevel: desired incomelevel id or ids.
     :lendingtype: desired lendingtype id or ids.
     :display: if True,print ids and names instead of returning results.
@@ -320,9 +282,9 @@ def get_indicator(indicator=None, source=None, topic=None, display=None):
     indicator, source, and topic can be specified.  Specifying none of the
     three will return all indicators.
 
-    :indicator: the specific indicator code
-    :source: a source id
-    :topic: a topic id
+    :indicator: an indicator code or sequence thereof
+    :source: a source id or sequence thereof
+    :topic: a topic id or sequence thereof
     :display: if True,print ids and names instead of returning results.
         Defaults to True if in interactive prompt, or False otherwise
     :returns: if display is False, a list of dictionary objects representing
@@ -333,13 +295,16 @@ def get_indicator(indicator=None, source=None, topic=None, display=None):
     if indicator:
         if source or topic:
             raise ValueError(INDIC_ERROR)
-        query_url = "/".join((INDICATOR_URL, indicator))
+        query_url = "/".join((INDICATOR_URL,
+                              __parse_value_or_iterable(indicator)))
     elif source:
         if topic:
             raise ValueError(INDIC_ERROR)
-        query_url = "/".join((SOURCES_URL, str(source), "indicators"))
+        query_url = "/".join((SOURCES_URL, __parse_value_or_iterable(source),
+                              "indicators"))
     elif topic:
-        query_url = "/".join((TOPIC_URL, str(topic), "indicators"))
+        query_url = "/".join((TOPIC_URL, __parse_value_or_iterable(topic),
+                              "indicators"))
     else:
         query_url = INDICATOR_URL
     results = FETCHER.fetch(query_url)
@@ -418,7 +383,7 @@ def print_ids_and_names(objs):
             print(templ.format(**i))
 
 
-@pandas
+@uses_pandas
 def get_dataframe_from_indicators(indicators, countries="all", data_date=None,
                                   convert_date=False):
     """
@@ -437,9 +402,8 @@ def get_dataframe_from_indicators(indicators, countries="all", data_date=None,
     """
     merged = None
     for indicator in indicators:
-        indic_df = get_data(indicator, countries, data_date, mrv,
-                            gapfill, frequency, convert_date, pandas=True,
-                            column_name=indicators[indicator])
+        indic_df = get_data(indicator, countries, data_date, convert_date,
+                            pandas=True, column_name=indicators[indicator])
         if merged is not None:
             merged = merged.merge(indic_df, on=["country", "date"])
         else:
