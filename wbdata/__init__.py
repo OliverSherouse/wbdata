@@ -159,10 +159,10 @@ def get_data(indicator, country="all", data_date=None, convert_date=False,
     args = []
     if data_date:
         if type(data_date) is tuple:
-            data_date_str = ":".join((i.strftime("%YM%m") for i in data_date))
+            data_date_str = ":".join((i.strftime("%Y") for i in data_date))
             args.append(("date", data_date_str))
         else:
-            args.append(("date", data_date.strftime("%YM%m")))
+            args.append(("date", data_date.strftime("%Y")))
     data = FETCHER.fetch(query_url, args)
     if convert_date:
         data = __convert_dates_to_datetime(data)
