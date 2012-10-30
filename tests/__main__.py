@@ -114,6 +114,16 @@ class TestGetData(unittest.TestCase):
                         data_date=(datetime.datetime(2006,1,1),
                                    datetime.datetime(2010,1,1)))
 
+    def testConvertDate(self):
+        wbdata.get_data("SH.XPD.PRIV.ZS", country="usa", convert_date=True)
+
+    def testPandas(self):
+        wbdata.get_data("SH.XPD.PRIV.ZS", country="usa", pandas=True)
+
+    def testColumnName(self):
+        wbdata.get_data("SH.XPD.PRIV.ZS", country="usa", pandas=True,
+                        column_name="IForget")
+
 #class TestSearchFunctions(unittest.TestCase):
     #def testSearchCountry(self):
         #wbdata.search_indicators("United", display=True)

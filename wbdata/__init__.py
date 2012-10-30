@@ -103,7 +103,6 @@ def __convert_dates_to_datetime(data):
         converter = __convert_quarter_to_datetime
     else:
         converter = __convert_year_to_datetime
-
     for datum in data:
         datum_date = datum['date']
         if "MRV" in datum_date:
@@ -111,7 +110,6 @@ def __convert_dates_to_datetime(data):
         if "-" in datum_date:
             continue
         datum['date'] = converter(datum_date)
-
     return data
 
 
@@ -160,7 +158,11 @@ def get_data(indicator, country="all", data_date=None, convert_date=False,
     query_url = "/".join((query_url, c_part, "indicators", indicator))
     args = []
     if data_date:
-        args.append("date", data_date.strftime("%YM%m"))
+        if type(data_date) is tuple:
+            data_date_str = ":".join((i.strftime("%YM%m") for i in data_date))
+            args.append(("date", data_date_str))
+        else:
+            args.append(("date", data_date.strftime("%YM%m")))
     data = FETCHER.fetch(query_url, args)
     if convert_date:
         data = __convert_dates_to_datetime(data)
