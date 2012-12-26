@@ -6,12 +6,11 @@ import logging
 import random
 import unittest
 
-import pandas
 import wbdata
 
 from tests import strings
 
-#logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.DEBUG)
 
 
 class TestSimpleQueries(unittest.TestCase):
@@ -24,7 +23,7 @@ class TestSimpleQueries(unittest.TestCase):
     def testGetAllLendingTypes(self):
         wbdata.get_lendingtype()
 
-    def testOneIncomeLevel(self):
+    def testOneLendingType(self):
         wbdata.get_lendingtype("IBD")
 
     def testGetAllSources(self):
@@ -42,7 +41,7 @@ class TestSimpleQueries(unittest.TestCase):
 
 class TestGetCountry(unittest.TestCase):
     def testAllCountries(self):
-        data = wbdata.get_country()
+        wbdata.get_country()
 
     def testUSA(self):
         expected = json.loads(strings.USA_DATA)
@@ -107,12 +106,12 @@ class TestGetData(unittest.TestCase):
 
     def testDate(self):
         wbdata.get_data("SH.XPD.PRIV.ZS", country="usa",
-                        data_date=datetime.datetime(2006,1,1))
+                        data_date=datetime.datetime(2006, 1, 1))
 
-    def testDate(self):
+    def testDateRange(self):
         wbdata.get_data("SH.XPD.PRIV.ZS", country="usa",
-                        data_date=(datetime.datetime(2006,1,1),
-                                   datetime.datetime(2010,1,1)))
+                        data_date=(datetime.datetime(2006, 1, 1),
+                                   datetime.datetime(2010, 1, 1)))
 
     def testConvertDate(self):
         wbdata.get_data("SH.XPD.PRIV.ZS", country="usa", convert_date=True)
@@ -132,19 +131,35 @@ class TestGetData(unittest.TestCase):
         #wbdata.search_indicators("gdp", display=True)
 
 
-#class TestGetDataframe(unittest.TestCase):
-    #def setUp(self):
+class TestGetDataframe(unittest.TestCase):
+    def setUp(self):
         #indicators = random.sample([i['id'] for i in wbdata.get_indicator()],
                                    #15)
         #self.indicators = {}
         #for i, indic in enumerate(indicators):
             #self.indicators [indic] = "label{0}".format(i)
-            
-    #def test_countries(self):
-        #all_countries = wbdata.get_country()
-        #countries = random.sample([i['id'] for i in all_countries], 5)
-        #df = wbdata.get_dataframe_from_indicators(self.indicators,
-                                                  #countries=countries)
+        self.indicators = {
+            "NY.GDP.MKTP.PP.KD": "gdp",
+            "NY.GDP.PCAP.PP.KD": "gdppc",
+        }
+
+    def test_countries(self):
+        all_countries = wbdata.get_country()
+        countries = random.sample([i['id'] for i in all_countries], 5)
+        wbdata.get_dataframe_from_indicators(self.indicators,
+                                             countries=countries)
+
+    def test_data_date_single(self):
+        data_date = datetime.datetime(2008, 1, 1)
+        wbdata.get_dataframe_from_indicators(self.indicators,
+                                             data_date=data_date)
+
+    def test_data_date_range(self):
+        data_date = (datetime.datetime(2008, 1, 1),
+                     datetime.datetime(2010, 1, 1))
+
+        wbdata.get_dataframe_from_indicators(self.indicators,
+                                             data_date=data_date)
 
 
 if __name__ == '__main__':
