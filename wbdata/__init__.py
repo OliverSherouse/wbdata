@@ -20,21 +20,22 @@ wbdata: A wrapper for the World Bank API
 from __future__ import print_function, unicode_literals
 
 import datetime
-import logging
-import sys
 
 try:
     import pandas as pd
 except ImportError:
     pd = None
 
-from wbdata import fetcher
+#from . import fetcher
+#from wbdata import fetcher
+import wbdata.fetcher as fetcher
+
 from decorator import decorator
 
 __all__ = ["get_data", "get_country", "get_source", "get_indicator",
            "get_incomelevel", "get_topic", "get_lendingtype",
            "search_indicators", "search_countries", "print_ids_and_names",
-           "get_dataframe_from_indicators", "fetcher"]
+           "get_dataframe_from_indicators"]
 __version__ = "0.0.1"
 import __main__ as main
 INTERACTIVE = not hasattr(main, "__file__")
@@ -64,7 +65,9 @@ def __parse_value_or_iterable(arg):
     If arg is a single value, return it as a string; if an iterable, return
     a ;-joined string of all values
     """
-    if type(arg) in (int, str, unicode):
+    if str(arg) == arg:
+        return arg
+    if type(arg) == int:
         return str(arg)
     return ";".join(arg)
 
@@ -395,7 +398,6 @@ def get_dataframe_from_indicators(indicators, countries="all", data_date=None,
     :indicators: An dictionary where the keys are desired indicators and the
         values are the desired column names
     :countries: a country code, sequence of country codes, or "all" (default)
-    :aggregates: the regional or aggregate code, or sequence thereof
     :data_date: the desired date as a datetime object or a 2-sequence with
         start and end dates
     :convert_date: if True, convert date field to a datetime.datetime object.

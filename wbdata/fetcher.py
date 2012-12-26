@@ -36,8 +36,8 @@ except ImportError:  # python 3
     import pickle
 
     from urllib.request import urlopen
-    from urlllib.error import URLError
-    from urlllib.parse import urlencode
+    from urllib.error import URLError
+    from urllib.parse import urlencode
 
 # Inspiration for below from Trent Mick and Sridhar Ratnakumar
 # <http://pypi.python.org/pypi/appdirs/1.2.0>
@@ -68,17 +68,22 @@ class Fetcher(object):
     Bank API
     """
     def __init__(self):
-        self.cache = None
+        self.__cache = None
 
-    def __assert_cache(self):  # speeds up initial import
+    @property
+    def cache(self):  # speeds up initial import
         """Create the cache if it isn't there"""
-        if self.cache:
-            return
-        try:
-            with open(CACHEPATH) as cachefile:
-                self.cache = pickle.load(cachefile)
-        except IOError:
-            self.cache = {}
+        if not self.__cache:
+            try:
+                with open(CACHEPATH, 'rb') as cachefile:
+                    try:
+                        self.__cache = pickle.load(cachefile, encoding="ascii",
+                                                   errors="replace")
+                    except TypeError:
+                        self.__cache = pickle.load(cachefile)
+            except IOError:
+                self.__cache = {}
+        return self.__cache
 
     def fetch(self, query_url, args=None, cached=True):
         """fetch data from the World Bank API or from cache
@@ -104,7 +109,6 @@ class Fetcher(object):
 
         :age: the max age (in days) of an entry
         """
-        self.__assert_cache()
         min_date = datetime.date.today().toordinal() - age
         for i in self.cache:
             if self.cache[i][DATE_IDX] < min_date:
@@ -116,29 +120,40 @@ class Fetcher(object):
         Page through results returned by query_url to return a single list
         """
         # TODO: This is a monster: break it up
-        self.__assert_cache()
         results = []
         original_url = query_url
         while 1:
-            if cached and query_url in self.cache:
-                response = self.cache[query_url]
-            else:
-                response = self.__retrieve_url(query_url)
-                self.cache[query_url] = response
-                self.sync_cache()
-            response = json.loads(response)
-            if response is None:
-                raise Exception(
-                    "Got no response from query {0}".format(query_url))
+            response = self.__retrieve_single_page(query_url, cached)
             results.extend(response[1])
-            this_page = response[0]['page']
-            pages = response[0]['pages']
+            try:
+                this_page = response[0]['page']
+                pages = response[0]['pages']
+            except TypeError:
+                print(response)
             logging.debug("Processed page {0} of {1}".format(this_page, pages))
             if this_page == pages:
                 break
             query_url = original_url + "&page={0}".format(int(this_page + 1))
             time.sleep(1)
         return results
+
+    def __retrieve_single_page(self, query_url, cached):
+        if cached and query_url in self.cache:
+            logging.debug("Retrieving from cache")
+            raw_response = self.cache[query_url]
+        else:
+            logging.debug("Retrieving from World Bank")
+            raw_response = self.__retrieve_url(query_url)
+            self.cache[query_url] = raw_response
+            self.sync_cache()
+        try:
+            response = json.loads(raw_response)
+        except ValueError:
+            raise ValueError("Bad Parameter")
+        if response is None:
+            raise Exception(
+                "Got no response from query {0}".format(query_url))
+        return response
 
     def __retrieve_url(self, url):
         thistry = 0
@@ -148,18 +163,19 @@ class Fetcher(object):
                 response = query.read()
                 query.close()
                 break
-            except URLError as e:
+            except URLError:
                 if thistry < TRIES:
                     thistry += 1
                     continue
                 else:
-                    print(url)
-                    raise e
-        return response
+                    logging.error("Couldn't retrieve url {}".format(url))
+                    raise
+        try:
+            return str(response, encoding="ascii", errors="replace")
+        except TypeError:
+            return str(response)
 
     def sync_cache(self):
         """Sync cache to disk"""
-        self.__assert_cache()
         with open(CACHEPATH, 'wb') as cachefile:
-            pickle.dump(self.cache, cachefile,
-                        protocol=pickle.HIGHEST_PROTOCOL)
+            pickle.dump(self.cache, cachefile, protocol=2)
