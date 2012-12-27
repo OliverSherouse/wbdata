@@ -17,7 +17,8 @@ wbdata.fetcher: retrieve and cache queries
 #You should have received a copy of the GNU General Public License
 #along with this program; if not. If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import print_function, unicode_literals
+from __future__ import print_function, division, absolute_import
+from __future__ import unicode_literals
 
 import datetime
 import json

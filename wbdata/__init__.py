@@ -17,7 +17,8 @@ wbdata: A wrapper for the World Bank API
 #You should have received a copy of the GNU General Public License
 #along with this program; if not. If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import print_function, unicode_literals
+from __future__ import print_function, division, absolute_import
+from __future__ import unicode_literals
 
 import datetime
 
@@ -26,16 +27,14 @@ try:
 except ImportError:
     pd = None
 
-#from . import fetcher
-#from wbdata import fetcher
-import wbdata.fetcher as fetcher
+from wbdata import fetcher
 
 from decorator import decorator
 
 __all__ = ["get_data", "get_country", "get_source", "get_indicator",
            "get_incomelevel", "get_topic", "get_lendingtype",
            "search_indicators", "search_countries", "print_ids_and_names",
-           "get_dataframe_from_indicators"]
+           "get_dataframe"]
 __version__ = "0.0.1"
 import __main__ as main
 INTERACTIVE = not hasattr(main, "__file__")
@@ -389,8 +388,8 @@ def print_ids_and_names(objs):
 
 
 @uses_pandas
-def get_dataframe_from_indicators(indicators, countries="all", data_date=None,
-                                  convert_date=False):
+def get_dataframe(indicators, countries="all", data_date=None,
+                  convert_date=False):
     """
     Convenience function to download a set of indicators and merge them into
     a pandas dataframe on the 'country' and 'date' columns.
