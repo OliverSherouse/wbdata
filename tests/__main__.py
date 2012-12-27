@@ -1,16 +1,18 @@
 #!/usr/bin/env python
+from __future__ import print_function, division, absolute_import
+from __future__ import unicode_literals
 
 import datetime
 import json
 import logging
-import random
 import unittest
 
 import wbdata
 
 from tests import strings
 
-logging.basicConfig(level=logging.DEBUG)
+#logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 
 
 class TestSimpleQueries(unittest.TestCase):
@@ -49,11 +51,6 @@ class TestGetCountry(unittest.TestCase):
         self.assertEqual(expected, got)
 
     def testOEC(self):
-        expected = json.loads(strings.OEC_DATA)
-        got = wbdata.get_country(incomelevel="OEC")
-        self.assertEqual(expected, got)
-
-    def testOEC_NOC(self):
         expected = json.loads(strings.OEC_DATA)
         got = wbdata.get_country(incomelevel="OEC")
         self.assertEqual(expected, got)
@@ -123,44 +120,37 @@ class TestGetData(unittest.TestCase):
         wbdata.get_data("SH.XPD.PRIV.ZS", country="usa", pandas=True,
                         column_name="IForget")
 
-#class TestSearchFunctions(unittest.TestCase):
-    #def testSearchCountry(self):
-        #wbdata.search_indicators("United", display=True)
 
-    #def testSearchCountry(self):
-        #wbdata.search_indicators("gdp", display=True)
+class TestSearchFunctions(unittest.TestCase):
+    def testSearchCountry(self):
+        wbdata.search_countries("United")
+
+    def testSearchIndicators(self):
+        wbdata.search_indicators("gdp")
 
 
 class TestGetDataframe(unittest.TestCase):
     def setUp(self):
-        #indicators = random.sample([i['id'] for i in wbdata.get_indicator()],
-                                   #15)
-        #self.indicators = {}
-        #for i, indic in enumerate(indicators):
-            #self.indicators [indic] = "label{0}".format(i)
         self.indicators = {
             "NY.GDP.MKTP.PP.KD": "gdp",
             "NY.GDP.PCAP.PP.KD": "gdppc",
         }
 
-    def test_countries(self):
-        all_countries = wbdata.get_country()
-        countries = random.sample([i['id'] for i in all_countries], 5)
-        wbdata.get_dataframe_from_indicators(self.indicators,
-                                             countries=countries)
+    def testCountries(self):
+        countries = ("USA", "GBR")
+        wbdata.get_dataframe(self.indicators, countries=countries)
 
-    def test_data_date_single(self):
+    def testDate(self):
         data_date = datetime.datetime(2008, 1, 1)
-        wbdata.get_dataframe_from_indicators(self.indicators,
-                                             data_date=data_date)
+        wbdata.get_dataframe(self.indicators, data_date=data_date)
 
-    def test_data_date_range(self):
+    def testDateRange(self):
         data_date = (datetime.datetime(2008, 1, 1),
                      datetime.datetime(2010, 1, 1))
+        wbdata.get_dataframe(self.indicators, data_date=data_date)
 
-        wbdata.get_dataframe_from_indicators(self.indicators,
-                                             data_date=data_date)
-
+    def testConvertDate(self):
+        wbdata.get_dataframe(self.indicators, convert_date=True)
 
 if __name__ == '__main__':
     unittest.main()
