@@ -1,4 +1,5 @@
 *.pyc
-docs/build
 MANIFEST
+docs/build
 dist
+build
