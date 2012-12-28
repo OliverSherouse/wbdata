@@ -1,3 +1,4 @@
-include *.txt *.rst
-recursive-include *.txt *.rst *.py
-prune docs/build
+include *.txt
+include *.rst
+recursive-include docs *.rst
+recursive-include tests *.py

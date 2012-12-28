@@ -10,9 +10,7 @@ setup(
     packages=["wbdata"],
     url="https://github.com/oliversherouse/wbdata",
     description="A library to access World Bank data",
-    install_requires=[
-        "decorator >= 3.4.0"
-    ],
+    requires=["decorator"],
     long_description=open('README.rst').read(),
     classifiers=[
         "Development Status :: 4 - Beta",
