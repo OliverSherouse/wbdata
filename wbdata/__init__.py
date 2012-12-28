@@ -414,7 +414,7 @@ def get_dataframe(indicators, country="all", data_date=None,
     """
     merged = None
     for indicator in indicators:
-        indic_df = get_data(indicator, countries, data_date, convert_date,
+        indic_df = get_data(indicator, country, data_date, convert_date,
                             pandas=True, column_name=indicators[indicator])
         if merged is not None:
             merged = merged.merge(indic_df, on=["country", "date"])
