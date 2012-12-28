@@ -138,7 +138,7 @@ class TestGetDataframe(unittest.TestCase):
 
     def testCountries(self):
         countries = ("USA", "GBR")
-        wbdata.get_dataframe(self.indicators, countries=countries)
+        wbdata.get_dataframe(self.indicators, country=countries)
 
     def testDate(self):
         data_date = datetime.datetime(2008, 1, 1)
