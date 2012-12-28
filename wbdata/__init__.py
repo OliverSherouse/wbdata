@@ -44,7 +44,7 @@ __all__ = [
     "search_countries",
     "search_indicators",
 ]
-__version__ = "0.0.1"
+__version__ = "0.1.0"
 import __main__ as main
 INTERACTIVE = not hasattr(main, "__file__")
 del(main)
