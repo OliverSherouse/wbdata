@@ -1,0 +1,3 @@
+include *.txt *.rst
+recursive-include *.txt *.rst *.py
+prune docs/build

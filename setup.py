@@ -9,10 +9,16 @@ setup(
     author_email="oliver.sherouse@gmail.com",
     packages=["wbdata"],
     url="https://github.com/oliversherouse/wbdata",
-    licence="GPL2",
     description="A library to access World Bank data",
     install_requires=[
         "decorator >= 3.4.0"
     ],
-    long_description=open('README.rst').read()
+    long_description=open('README.rst').read(),
+    classifiers=[
+        "Development Status :: 4 - Beta",
+        "Intended Audience :: Science/Research",
+        "License :: OSI Approved :: GNU General Public License v2 or later (GPLv2+)",
+        "Operating System :: OS Independent",
+        "Topic :: Scientific/Engineering",
+    ],
 )
