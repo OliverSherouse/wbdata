@@ -27,14 +27,23 @@ try:
 except ImportError:
     pd = None
 
-from wbdata import fetcher
+from . import fetcher
 
 from decorator import decorator
 
-__all__ = ["get_data", "get_country", "get_source", "get_indicator",
-           "get_incomelevel", "get_topic", "get_lendingtype",
-           "search_indicators", "search_countries", "print_ids_and_names",
-           "get_dataframe"]
+__all__ = [
+    "get_country",
+    "get_data",
+    "get_dataframe",
+    "get_incomelevel",
+    "get_indicator",
+    "get_lendingtype",
+    "get_source",
+    "get_topic",
+    "print_ids_and_names",
+    "search_countries",
+    "search_indicators",
+]
 __version__ = "0.0.1"
 import __main__ as main
 INTERACTIVE = not hasattr(main, "__file__")
@@ -388,7 +397,7 @@ def print_ids_and_names(objs):
 
 
 @uses_pandas
-def get_dataframe(indicators, countries="all", data_date=None,
+def get_dataframe(indicators, country="all", data_date=None,
                   convert_date=False):
     """
     Convenience function to download a set of indicators and merge them into
@@ -396,7 +405,7 @@ def get_dataframe(indicators, countries="all", data_date=None,
 
     :indicators: An dictionary where the keys are desired indicators and the
         values are the desired column names
-    :countries: a country code, sequence of country codes, or "all" (default)
+    :country: a country code, sequence of country codes, or "all" (default)
     :data_date: the desired date as a datetime object or a 2-sequence with
         start and end dates
     :convert_date: if True, convert date field to a datetime.datetime object.
