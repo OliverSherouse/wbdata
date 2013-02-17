@@ -17,8 +17,8 @@ wbdata: A wrapper for the World Bank API
 #You should have received a copy of the GNU General Public License
 #along with this program; if not. If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import print_function, division, absolute_import
-from __future__ import unicode_literals
+from __future__ import (print_function, division, absolute_import,
+                        unicode_literals)
 
 import datetime
 
@@ -157,9 +157,12 @@ def get_data(indicator, country="all", data_date=None, convert_date=False,
     :date: the desired date as a datetime object or a 2-sequence with
         start and end dates
     :convert_date: if True, convert date field to a datetime.datetime object.
-    :pandas: if True, return results as a pandas DataFrame
+    :pandas: if True, return results as a pandas Series.  The index will be the
+        date of the data if only one country is specified, the countries if
+        only one date is specified, or a multi-index of country and date
+        otherwise.
     :column_name: the desired name for the pandas column
-    :returns: list of dictionaries or pandas DataFrame
+    :returns: list of dictionaries or pandas Series
     """
     query_url = COUNTRIES_URL
     try:
@@ -178,7 +181,14 @@ def get_data(indicator, country="all", data_date=None, convert_date=False,
     if convert_date:
         data = __convert_dates_to_datetime(data)
     if pandas:
-        return __convert_to_dataframe(data, column_name)
+        df = __convert_to_dataframe(data, column_name)
+        if len(df["country"]) == 1:
+            df = df.set_index("date")
+        elif len(df["date"]) == 1:
+            df = df.set_index("country")
+        else:
+            df = df.set_index(["country", "date"])
+        return df[column_name]
     return data
 
 
@@ -400,9 +410,9 @@ def print_ids_and_names(objs):
 def get_dataframe(indicators, country="all", data_date=None,
                   convert_date=False):
     """
-    Convenience function to download a set of indicators and merge them into
-    a pandas dataframe on the 'country' and 'date' columns.
-
+    Convenience function to download a set of indicators and  merge them into a
+        pandas DataFrame.  The index will be the same as if calls were made to
+        get_data separately.
     :indicators: An dictionary where the keys are desired indicators and the
         values are the desired column names
     :country: a country code, sequence of country codes, or "all" (default)
@@ -412,12 +422,6 @@ def get_dataframe(indicators, country="all", data_date=None,
     :returns: a pandas dataframe
 
     """
-    merged = None
-    for indicator in indicators:
-        indic_df = get_data(indicator, country, data_date, convert_date,
-                            pandas=True, column_name=indicators[indicator])
-        if merged is not None:
-            merged = merged.merge(indic_df, on=["country", "date"])
-        else:
-            merged = indic_df
-    return merged
+    to_df = [get_data(i, country, data_date, convert_date, pandas=True,
+                      column_name=indicators[i]) for i in indicators]
+    return pd.DataFrame(to_df)
