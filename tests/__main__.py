@@ -152,5 +152,60 @@ class TestGetDataframe(unittest.TestCase):
     def testConvertDate(self):
         wbdata.get_dataframe(self.indicators, convert_date=True)
 
+
+class TestGetPanel(unittest.TestCase):
+    def setUp(self):
+        self.indicators = {
+            "NY.GDP.MKTP.PP.KD": "gdp",
+            "NY.GDP.PCAP.PP.KD": "gdppc",
+        }
+
+    def testCountries(self):
+        countries = ("USA", "GBR")
+        wbdata.get_panel(self.indicators, country=countries)
+
+    def testDate(self):
+        data_date = datetime.datetime(2008, 1, 1)
+        wbdata.get_panel(self.indicators, data_date=data_date)
+
+    def testDateRange(self):
+        data_date = (datetime.datetime(2008, 1, 1),
+                     datetime.datetime(2010, 1, 1))
+        wbdata.get_panel(self.indicators, data_date=data_date)
+
+    def testConvertDate(self):
+        wbdata.get_panel(self.indicators, convert_date=True)
+
+    def testIndicatorsCountries(self):
+        data_date = (datetime.datetime(2008, 1, 1),
+                     datetime.datetime(2010, 1, 1))
+        wbdata.get_panel(self.indicators, data_date=data_date,
+                         major_axis="countries")
+
+    def testCountriesDates(self):
+        data_date = (datetime.datetime(2008, 1, 1),
+                     datetime.datetime(2010, 1, 1))
+        wbdata.get_panel(self.indicators, data_date=data_date,
+                         items="countries")
+
+    def testCountriesIndicators(self):
+        data_date = (datetime.datetime(2008, 1, 1),
+                     datetime.datetime(2010, 1, 1))
+        wbdata.get_panel(self.indicators, data_date=data_date,
+                         items="countries", major_axis="indicators")
+
+    def testDatesCountries(self):
+        data_date = (datetime.datetime(2008, 1, 1),
+                     datetime.datetime(2010, 1, 1))
+        wbdata.get_panel(self.indicators, data_date=data_date,
+                         items="dates", major_axis="countries")
+
+    def testDatesIndicators(self):
+        data_date = (datetime.datetime(2008, 1, 1),
+                     datetime.datetime(2010, 1, 1))
+        wbdata.get_panel(self.indicators, data_date=data_date,
+                         items="dates", major_axis="indicators")
+
+
 if __name__ == '__main__':
     unittest.main()

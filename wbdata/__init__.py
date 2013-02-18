@@ -44,7 +44,7 @@ __all__ = [
     "search_countries",
     "search_indicators",
 ]
-__version__ = "0.1.0"
+__version__ = "0.2.0.a0"
 import __main__ as main
 INTERACTIVE = not hasattr(main, "__file__")
 del(main)
@@ -420,8 +420,49 @@ def get_dataframe(indicators, country="all", data_date=None,
         start and end dates
     :convert_date: if True, convert date field to a datetime.datetime object.
     :returns: a pandas dataframe
-
     """
-    to_df = [get_data(i, country, data_date, convert_date, pandas=True,
-                      column_name=indicators[i]) for i in indicators]
+    to_df = {indicators[i]: get_data(i, country, data_date, convert_date,
+                                     pandas=True) for i in indicators}
     return pd.DataFrame(to_df)
+
+
+@uses_pandas
+def get_panel(indicators, country="all", data_date=None, convert_date=False,
+              items="indicators", major_axis="dates"):
+    """
+    Convenience function to download a set of indicators and  merge them into a
+        pandas Panel.
+    :indicators: An dictionary where the keys are desired indicators and the
+        values are the desired column names
+    :country: a country code, sequence of country codes, or "all" (default)
+    :data_date: the desired date as a datetime object or a 2-sequence with
+        start and end dates
+    :convert_date: if True, convert date field to a datetime.datetime object.
+    :items: which values to use as the Panel items.  One of "indicators",
+        "countries", "dates"
+    :major_axis: which values to use as major axis for each item.  One of
+        "indicators", "countries", "dates"
+    :returns: a pandas dataframe
+    """
+    df = get_dataframe(indicators, country, data_date, convert_date)
+    if items == major_axis:
+        raise ValueError("Cannot have the same value for items and major_axis")
+    if items not in ("indicators", "countries", "dates"):
+        raise ValueError("Bad value for items")
+    if major_axis not in ("indicators", "countries", "dates"):
+        raise ValueError("Bad value for major_axis")
+    if items == "indicators":
+        if major_axis == "dates":
+            return pd.Panel({i: df[i].unstack(level=0) for i in df.columns})
+        return pd.Panel({i: df[i].unstack() for i in df})
+    if items == "countries":
+        if major_axis == "dates":
+            return pd.Panel({i: df.xs(i, level=0) for i in
+                             df.index.get_level_values(0)})
+        return pd.Panel({i: df.xs(i, level=0).transpose() for i in
+                         df.index.get_level_values(0)})
+    if major_axis == "countries":
+        return pd.Panel({i: df.xs(i, level=1) for i in
+                         df.index.get_level_values(1)})
+    return pd.Panel({i: df.xs(i, level=1).transpose() for i in
+                     df.index.get_level_values(1)})
