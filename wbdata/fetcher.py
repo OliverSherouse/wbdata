@@ -17,8 +17,8 @@ wbdata.fetcher: retrieve and cache queries
 #You should have received a copy of the GNU General Public License
 #along with this program; if not. If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import print_function, division, absolute_import
-from __future__ import unicode_literals
+from __future__ import (print_function, division, absolute_import
+                        unicode_literals)
 
 import datetime
 import json
@@ -44,10 +44,8 @@ except ImportError:  # python 3
 # <http://pypi.python.org/pypi/appdirs/1.2.0>
 
 if sys.platform.startswith("win"):
-    BASEDIR = os.path.join(os.getenv("LOCALAPPDATA",
-                                     os.getenv("APPDATA",
-                                               os.path.expanduser("~"))),
-                           "wbdata")
+    BASEDIR = os.path.join(os.getenv("LOCALAPPDATA", os.getenv(
+        "APPDATA", os.path.expanduser("~"))), "wbdata")
 elif sys.platform is "darwin":
     BASEDIR = os.path.expanduser('~/Library/Caches')
 else:

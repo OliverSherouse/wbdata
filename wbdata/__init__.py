@@ -458,11 +458,11 @@ def get_panel(indicators, country="all", data_date=None, convert_date=False,
     if items == "countries":
         if major_axis == "dates":
             return pd.Panel({i: df.xs(i, level=0) for i in
-                             df.index.get_level_values(0)})
+                             sorted(set(df.index.get_level_values(0)))})
         return pd.Panel({i: df.xs(i, level=0).transpose() for i in
-                         df.index.get_level_values(0)})
+                         sorted(set(df.index.get_level_values(0)))})
     if major_axis == "countries":
         return pd.Panel({i: df.xs(i, level=1) for i in
-                         df.index.get_level_values(1)})
+                         sorted(set(df.index.get_level_values(1)))})
     return pd.Panel({i: df.xs(i, level=1).transpose() for i in
-                     df.index.get_level_values(1)})
+                     sorted(set(df.index.get_level_values(1)))})
