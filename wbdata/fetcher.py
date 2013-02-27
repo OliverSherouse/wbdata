@@ -20,12 +20,10 @@ wbdata.fetcher: retrieve and cache queries
 from __future__ import (print_function, division, absolute_import,
                         unicode_literals)
 
-import datetime
 import json
 import logging
 import os
 import sys
-import time
 
 try:  # python 2
     import cPickle as pickle
@@ -43,107 +41,107 @@ except ImportError:  # python 3
 # Inspiration for below from Trent Mick and Sridhar Ratnakumar
 # <http://pypi.python.org/pypi/appdirs/1.2.0>
 
-if sys.platform.startswith("win"):
-    BASEDIR = os.path.join(os.getenv("LOCALAPPDATA", os.getenv(
-        "APPDATA", os.path.expanduser("~"))), "wbdata")
-elif sys.platform is "darwin":
-    BASEDIR = os.path.expanduser('~/Library/Caches')
-else:
-    BASEDIR = os.getenv('XDG_CACHE_HOME', os.path.expanduser('~/.cache'))
-
-CACHEDIR = os.path.join(BASEDIR, 'wbdata')
-if not os.path.exists(CACHEDIR):
-    os.mkdir(CACHEDIR)
-CACHEPATH = os.path.join(CACHEDIR, "cache")
 PER_PAGE = 1000
-DATE_IDX = 0
-DATA_IDX = 1
 TRIES = 5
 
 
-class Fetcher(object):
-    """
-    An object with a cache to retrieve and page responses from the World
-    Bank API
-    """
+class Cache(object):
+    """Docstring for Cache """
+
     def __init__(self):
+        """@todo: to be defined """
+        self.__path = None
         self.__cache = None
 
     @property
-    def cache(self):  # speeds up initial import
-        """Create the cache if it isn't there"""
-        if not self.__cache:
+    def path(self):
+        if self.__path is None:
+            if sys.platform.startswith("win"):
+                basedir = os.path.join(os.getenv("LOCALAPPDATA", os.getenv(
+                    "APPDATA", os.path.expanduser("~"))), "wbdata")
+            elif sys.platform is "darwin":
+                basedir = os.path.expanduser('~/Library/Caches')
+            else:
+                basedir = os.getenv('XDG_CACHE_HOME',
+                                    os.path.expanduser('~/.cache'))
+            cachedir = os.path.join(basedir, 'wbdata')
+            if not os.path.exists(cachedir):
+                os.mkdir(cachedir)
+            self.__path = os.path.join(cachedir, "cache")
+        return self.__path
+
+    @property
+    def cache(self):
+        if self.__cache is None:
             try:
-                with open(CACHEPATH, 'rb') as cachefile:
+                with open(self.path, 'rb') as cachefile:
                     try:
-                        self.__cache = pickle.load(cachefile, encoding="ascii",
-                                                   errors="replace")
+                        cache = pickle.load(cachefile, encoding="ascii",
+                                            errors="replace")
                     except TypeError:
-                        self.__cache = pickle.load(cachefile)
+                        cache = pickle.load(cachefile)
             except IOError:
-                self.__cache = {}
+                cache = {}
+            self.__cache = cache
         return self.__cache
 
-    def fetch(self, query_url, args=None, cached=True):
-        """fetch data from the World Bank API or from cache
+    def __getitem__(self, key):
+        return self.cache[key]
 
-        :query_url: the base url to be queried
-        :args: a dictionary of GET arguments
-        :cached: use the cache
-        :returns: a list of dictionaries containing the response to the query
-        """
-        if not args:
-            args = []
-        args.extend([("format", "json"), ("per_page", PER_PAGE)])
-        query_url = "?".join((query_url, urlencode(args)))
-        logging.debug("Query using {0}".format(query_url))
-        results = self.__get_paged_data(query_url, cached)
-        for i in results:
-            if "id" in i:
-                i['id'] = i['id'].strip()
-        return results
+    def __setitem__(self, key, value):
+        self.cache[key] = value
+        self.sync()
 
-    def prune(self, age=30):
-        """Delete all entries more than age days old
+    def __contains__(self, item):
+        return item in self.cache
 
-        :age: the max age (in days) of an entry
-        """
-        min_date = datetime.date.today().toordinal() - age
-        for i in self.cache:
-            if self.cache[i][DATE_IDX] < min_date:
-                del(self.cache[i])
-        self.sync_cache()
+    def sync(self):
+        """Sync cache to disk"""
+        with open(self.path, 'wb') as cachefile:
+            pickle.dump(self.cache, cachefile, protocol=2)
 
-    def __get_paged_data(self, query_url, cached):
-        """
-        Page through results returned by query_url to return a single list
-        """
-        results = []
-        original_url = query_url
-        while 1:
-            response = self.__retrieve_single_page(query_url, cached)
-            results.extend(response[1])
-            try:
-                this_page = response[0]['page']
-                pages = response[0]['pages']
-            except TypeError:
-                print(response)
-            logging.debug("Processed page {0} of {1}".format(this_page, pages))
-            if this_page == pages:
-                break
-            query_url = original_url + "&page={0}".format(int(this_page + 1))
-            time.sleep(1)
-        return results
+CACHE = Cache()
 
-    def __retrieve_single_page(self, query_url, cached):
-        if cached and query_url in self.cache:
+
+def fetch(query_url, args=None, cached=True):
+    """fetch data from the World Bank API or from cache
+
+    :query_url: the base url to be queried
+    :args: a dictionary of GET arguments
+    :cached: use the cache
+    :returns: a list of dictionaries containing the response to the query
+    """
+    if args is None:
+        args = []
+    args.extend([("format", "json"), ("per_page", PER_PAGE)])
+    query_url = "?".join((query_url, urlencode(args)))
+    logging.debug("Query using {0}".format(query_url))
+    results = []
+    original_url = query_url
+    while 1:
+        if cached and query_url in CACHE:
             logging.debug("Retrieving from cache")
-            raw_response = self.cache[query_url]
+            raw_response = CACHE[query_url]
         else:
             logging.debug("Retrieving from World Bank")
-            raw_response = self.__retrieve_url(query_url)
-            self.cache[query_url] = raw_response
-            self.sync_cache()
+            url_response = None
+            for i in range(TRIES):
+                try:
+                    query = urlopen(query_url)
+                    url_response = query.read()
+                    query.close()
+                    break
+                except URLError:
+                    continue
+            if url_response is None:
+                logging.error("Couldn't retrieve url {}".format(query_url))
+                raise ValueError
+            try:
+                raw_response = str(url_response, encoding="ascii",
+                                   errors="replace")
+            except TypeError:
+                raw_response = str(url_response)
+            CACHE[query_url] = raw_response
         try:
             response = json.loads(raw_response)
         except ValueError:
@@ -151,29 +149,14 @@ class Fetcher(object):
         if response is None:
             raise Exception(
                 "Got no response from query {0}".format(query_url))
-        return response
-
-    def __retrieve_url(self, url):
-        thistry = 0
-        while 1:
-            try:
-                query = urlopen(url)
-                response = query.read()
-                query.close()
-                break
-            except URLError:
-                if thistry < TRIES:
-                    thistry += 1
-                    continue
-                else:
-                    logging.error("Couldn't retrieve url {}".format(url))
-                    raise
-        try:
-            return str(response, encoding="ascii", errors="replace")
-        except TypeError:
-            return str(response)
-
-    def sync_cache(self):
-        """Sync cache to disk"""
-        with open(CACHEPATH, 'wb') as cachefile:
-            pickle.dump(self.cache, cachefile, protocol=2)
+        results.extend(response[1])
+        this_page = response[0]['page']
+        pages = response[0]['pages']
+        logging.debug("Processed page {0} of {1}".format(this_page, pages))
+        if this_page == pages:
+            break
+        query_url = original_url + "&page={0}".format(int(this_page + 1))
+    for i in results:
+        if "id" in i:
+            i['id'] = i['id'].strip()
+    return results

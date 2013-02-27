@@ -11,8 +11,8 @@ import wbdata
 
 from tests import strings
 
-#logging.basicConfig(level=logging.DEBUG)
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
+#logging.basicConfig(level=logging.INFO)
 
 
 class TestSimpleQueries(unittest.TestCase):

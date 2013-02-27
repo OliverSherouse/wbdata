@@ -57,8 +57,6 @@ SOURCES_URL = "{0}/sources".format(BASE_URL)
 TOPIC_URL = "{0}/topics".format(BASE_URL)
 INDIC_ERROR = "Cannot specify more than one of indicator, source, and topic"
 
-FETCHER = fetcher.Fetcher()
-
 
 @decorator
 def uses_pandas(f, *args, **kwargs):
@@ -177,7 +175,7 @@ def get_data(indicator, country="all", data_date=None, convert_date=False,
             args.append(("date", data_date_str))
         else:
             args.append(("date", data_date.strftime("%Y")))
-    data = FETCHER.fetch(query_url, args)
+    data = fetcher.fetch(query_url, args)
     if convert_date:
         data = __convert_dates_to_datetime(data)
     if pandas:
@@ -206,7 +204,7 @@ def __id_only_query(query_url, query_id, display):
         display = INTERACTIVE
     if query_id:
         query_url = "/".join((query_url, __parse_value_or_iterable(query_id)))
-    results = FETCHER.fetch(query_url)
+    results = fetcher.fetch(query_url)
     if display:
         print_ids_and_names(results)
     else:
@@ -292,7 +290,7 @@ def get_country(country_id=None, incomelevel=None, lendingtype=None,
         args.append(("incomeLevel", __parse_value_or_iterable(incomelevel)))
     if lendingtype:
         args.append(("lendingType", __parse_value_or_iterable(lendingtype)))
-    results = FETCHER.fetch(COUNTRIES_URL, args)
+    results = fetcher.fetch(COUNTRIES_URL, args)
     if display:
         print_ids_and_names(results)
     else:
@@ -330,7 +328,7 @@ def get_indicator(indicator=None, source=None, topic=None, display=None):
                               "indicators"))
     else:
         query_url = INDICATOR_URL
-    results = FETCHER.fetch(query_url)
+    results = fetcher.fetch(query_url)
     if display:
         print_ids_and_names(results)
     else:
