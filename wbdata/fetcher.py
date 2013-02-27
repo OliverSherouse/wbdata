@@ -17,7 +17,7 @@ wbdata.fetcher: retrieve and cache queries
 #You should have received a copy of the GNU General Public License
 #along with this program; if not. If not, see <http://www.gnu.org/licenses/>.
 
-from __future__ import (print_function, division, absolute_import
+from __future__ import (print_function, division, absolute_import,
                         unicode_literals)
 
 import datetime
@@ -118,7 +118,6 @@ class Fetcher(object):
         """
         Page through results returned by query_url to return a single list
         """
-        # TODO: This is a monster: break it up
         results = []
         original_url = query_url
         while 1:
