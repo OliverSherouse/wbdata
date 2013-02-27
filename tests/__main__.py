@@ -46,19 +46,13 @@ class TestGetCountry(unittest.TestCase):
         wbdata.get_country()
 
     def testUSA(self):
-        expected = json.loads(strings.USA_DATA)
-        got = wbdata.get_country(country_id="USA")
-        self.assertEqual(expected, got)
+        wbdata.get_country(country_id="USA")
 
     def testOEC(self):
-        expected = json.loads(strings.OEC_DATA)
-        got = wbdata.get_country(incomelevel="OEC")
-        self.assertEqual(expected, got)
+        wbdata.get_country(incomelevel="OEC")
 
     def testIDB(self):
-        expected = json.loads(strings.IDB_DATA)
-        got = wbdata.get_country(lendingtype="IDB")
-        self.assertEqual(expected, got)
+        wbdata.get_country(lendingtype="IDB")
 
     @unittest.expectedFailure
     def testBadCountry(self):
