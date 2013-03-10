@@ -38,6 +38,31 @@ Full Package Documentation
     api
     fetcher
 
+
+Installation
+------------
+Wbdata is available on `PyPi <https://pypi.python.org/pypi/wbdata>`_ which
+means you can download it from there or install using easy_install or pip:
+
+    easy_install wbdata
+    pip install wbdata
+
+You can also download or get the source from `GitHub
+<http://github.com/OliverSherouse/wbdata>`_.
+
+
+Suggested Citation
+------------------
+If you use wbdata in a paper, it would be great to cite it.  It lets me know to
+keep working on it, and it lets other researchers know how to make their lives
+easier.  Suggested citation would be something like:
+
+.. epigraph::
+
+    Sherouse, Oliver (2013). Wbdata. Arlington, VA.  Available from
+    http://github.com/OliverSherouse/wbdata.
+
+
 A Typical User Session
 ----------------------
 Let's say we want to find some data for the ease of doing business in some
