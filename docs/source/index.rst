@@ -45,6 +45,7 @@ Wbdata is available on `PyPi <https://pypi.python.org/pypi/wbdata>`_ which
 means you can download it from there or install using easy_install or pip:
 
     easy_install wbdata
+
     pip install wbdata
 
 You can also download or get the source from `GitHub
