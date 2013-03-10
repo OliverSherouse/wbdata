@@ -38,7 +38,7 @@ except ImportError:  # python 3
     from urllib.error import URLError
     from urllib.parse import urlencode
 
-PER_PAGE = 1000
+PER_PAGE = 50
 TRIES = 5
 
 
@@ -102,7 +102,13 @@ class Cache(object):
 CACHE = Cache()
 
 
-def __fetch_url(url):
+def fetch_url(url):
+    """
+    Fetch a url directly from the World Bank, up to TRIES tries
+
+    :url: the  url to retrieve
+    :returns: a string with the url contents
+    """
     response = None
     for i in range(TRIES):
         try:
@@ -140,7 +146,7 @@ def fetch(query_url, args=None, cached=True):
         if cached and query_url in CACHE:
             raw_response = CACHE[query_url]
         else:
-            raw_response = __fetch_url(query_url)
+            raw_response = fetch_url(query_url)
             CACHE[query_url] = raw_response
         response = json.loads(raw_response)
         if response is None:
@@ -149,7 +155,7 @@ def fetch(query_url, args=None, cached=True):
         this_page = response[0]['page']
         pages = response[0]['pages']
         logging.debug("Processed page {0} of {1}".format(this_page, pages))
-        query_url = original_url + "&page={0}".format(int(this_page + 1))
+        query_url = original_url + "&page={0}".format(int(this_page) + 1)
 
     for i in results:
         if "id" in i:
