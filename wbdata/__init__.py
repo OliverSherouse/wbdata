@@ -2,7 +2,7 @@
 wbdata: A wrapper for the World Bank API
 """
 
-#Copyright (C) 2012  Oliver Sherouse <Oliver DOT Sherouse AT gmail DOT com>
+#Copyright (C) 2012-2013 Oliver Sherouse <Oliver DOT Sherouse AT gmail DOT com>
 
 #This program is free software; you can redistribute it and/or
 #modify it under the terms of the GNU General Public License
