@@ -38,7 +38,7 @@ except ImportError:  # python 3
     from urllib.error import URLError
     from urllib.parse import urlencode
 
-PER_PAGE = 50
+PER_PAGE = 1000
 TRIES = 5
 
 
