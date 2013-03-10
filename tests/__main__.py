@@ -3,16 +3,13 @@ from __future__ import print_function, division, absolute_import
 from __future__ import unicode_literals
 
 import datetime
-import json
 import logging
 import unittest
 
 import wbdata
 
-from tests import strings
-
-logging.basicConfig(level=logging.DEBUG)
-#logging.basicConfig(level=logging.INFO)
+#logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 
 
 class TestSimpleQueries(unittest.TestCase):
