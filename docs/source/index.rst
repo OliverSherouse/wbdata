@@ -35,6 +35,7 @@ Full Package Documentation
     :maxdepth: 2
 
     wbdata
+    api
     fetcher
 
 A Typical User Session

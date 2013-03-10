@@ -1,9 +1,8 @@
-wbdata.fetcher library reference
-================================
-Fetcher is the mechanism used by wbdata for reading, paging, caching, and
-converting responses from the World Bank. Luckily, most users will have no
-need to deal with this library, which is why it is separate.
+wbdata.api library reference
+============================
+The api library is where all the nuts-and-bolts functions are defined, as well
+as those which are imported into the main namespace.
 
-.. automodule:: wbdata.fetcher
+.. automodule:: wbdata.api
     :members:
 

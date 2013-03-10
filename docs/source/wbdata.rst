@@ -9,7 +9,6 @@ Convenience Functions
 ---------------------
 .. autofunction:: wbdata.search_indicators
 .. autofunction:: wbdata.search_countries
-.. autofunction:: wbdata.print_ids_and_names
 .. autofunction:: wbdata.get_dataframe
 
 Finding the data you want
