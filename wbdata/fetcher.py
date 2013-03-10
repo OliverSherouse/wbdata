@@ -38,9 +38,6 @@ except ImportError:  # python 3
     from urllib.error import URLError
     from urllib.parse import urlencode
 
-# Inspiration for below from Trent Mick and Sridhar Ratnakumar
-# <http://pypi.python.org/pypi/appdirs/1.2.0>
-
 PER_PAGE = 1000
 TRIES = 5
 
@@ -56,6 +53,8 @@ class Cache(object):
     @property
     def path(self):
         if self.__path is None:
+            # Inspiration for below from Trent Mick and Sridhar Ratnakumar
+            # <http://pypi.python.org/pypi/appdirs/1.2.0>
             if sys.platform.startswith("win"):
                 basedir = os.path.join(os.getenv("LOCALAPPDATA", os.getenv(
                     "APPDATA", os.path.expanduser("~"))), "wbdata")
@@ -103,6 +102,24 @@ class Cache(object):
 CACHE = Cache()
 
 
+def __fetch_url(url):
+    response = None
+    for i in range(TRIES):
+        try:
+            query = urlopen(url)
+            response = query.read()
+            query.close()
+            break
+        except URLError:
+            continue
+    if response is None:
+        raise ValueError
+    try:
+        return str(response, encoding="ascii", errors="replace")
+    except TypeError:
+        return str(response)
+
+
 def fetch(query_url, args=None, cached=True):
     """fetch data from the World Bank API or from cache
 
@@ -113,49 +130,27 @@ def fetch(query_url, args=None, cached=True):
     """
     if args is None:
         args = []
-    args.extend([("format", "json"), ("per_page", PER_PAGE)])
+    args.extend((("format", "json"), ("per_page", PER_PAGE)))
     query_url = "?".join((query_url, urlencode(args)))
     logging.debug("Query using {0}".format(query_url))
     results = []
     original_url = query_url
-    while 1:
+    pages, this_page = 0, 1
+    while pages != this_page:
         if cached and query_url in CACHE:
-            logging.debug("Retrieving from cache")
             raw_response = CACHE[query_url]
         else:
-            logging.debug("Retrieving from World Bank")
-            url_response = None
-            for i in range(TRIES):
-                try:
-                    query = urlopen(query_url)
-                    url_response = query.read()
-                    query.close()
-                    break
-                except URLError:
-                    continue
-            if url_response is None:
-                logging.error("Couldn't retrieve url {}".format(query_url))
-                raise ValueError
-            try:
-                raw_response = str(url_response, encoding="ascii",
-                                   errors="replace")
-            except TypeError:
-                raw_response = str(url_response)
+            raw_response = __fetch_url(query_url)
             CACHE[query_url] = raw_response
-        try:
-            response = json.loads(raw_response)
-        except ValueError:
-            raise ValueError("Bad Parameter")
+        response = json.loads(raw_response)
         if response is None:
-            raise Exception(
-                "Got no response from query {0}".format(query_url))
+            raise ValueError("Got no response")
         results.extend(response[1])
         this_page = response[0]['page']
         pages = response[0]['pages']
         logging.debug("Processed page {0} of {1}".format(this_page, pages))
-        if this_page == pages:
-            break
         query_url = original_url + "&page={0}".format(int(this_page + 1))
+
     for i in results:
         if "id" in i:
             i['id'] = i['id'].strip()
