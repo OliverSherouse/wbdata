@@ -65,7 +65,7 @@ class Cache(object):
                                     os.path.expanduser('~/.cache'))
             cachedir = os.path.join(basedir, 'wbdata')
             if not os.path.exists(cachedir):
-                os.mkdir(cachedir)
+                os.makedirs(cachedir)
             self.__path = os.path.join(cachedir, "cache")
         return self.__path
 
