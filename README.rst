@@ -7,5 +7,4 @@ wraps most of the `World Bank API
 <http://data.worldbank.org/developers/api-overview>`_, and also adds some
 convenience functions for searching and retrieving information.
 
-Documentation is available at http://oliversherouse.github.com/wbdata/
-
+Documentation is available at http://wbdata.readthedocs.org/ .
