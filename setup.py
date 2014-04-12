@@ -1,10 +1,17 @@
 #!/usr/bin/env python
 
+import re
 from distutils.core import setup
+
+version = re.search(
+    '^__version__\s*=\s*"(.*)"',
+    open('wbdata/__init__.py').read(),
+    re.M
+    ).group(1)
 
 setup(
     name='wbdata',
-    version='0.2.1',
+    version=version,
     author="Oliver Sherouse",
     author_email="oliver.sherouse@gmail.com",
     packages=["wbdata"],

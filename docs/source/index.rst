@@ -60,7 +60,7 @@ easier.  Suggested citation would be something like:
 
 .. epigraph::
 
-    Sherouse, Oliver (2013). Wbdata. Arlington, VA.  Available from
+    Sherouse, Oliver (2014). Wbdata. Arlington, VA.  Available from
     http://github.com/OliverSherouse/wbdata.
 
 
