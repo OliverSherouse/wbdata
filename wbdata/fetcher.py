@@ -24,6 +24,7 @@ import json
 import logging
 import os
 import sys
+import datetime
 
 try:  # python 2
     import cPickle as pickle
@@ -100,6 +101,12 @@ class Cache(object):
             pickle.dump(self.cache, cachefile, protocol=2)
 
 CACHE = Cache()
+EXP = 7
+
+def daycount(date=None):
+    if date is None:
+        date = datetime.datetime.today()
+    return (date - datetime.datetime(2000, 1, 1)).days
 
 
 def fetch_url(url):
@@ -143,11 +150,12 @@ def fetch(query_url, args=None, cached=True):
     original_url = query_url
     pages, this_page = 0, 1
     while pages != this_page:
-        if cached and query_url in CACHE:
-            raw_response = CACHE[query_url]
+        if (cached and query_url in CACHE
+                and daycount() - CACHE[query_url][0] < EXP):
+            raw_response = CACHE[query_url][1]
         else:
             raw_response = fetch_url(query_url)
-            CACHE[query_url] = raw_response
+            CACHE[query_url] = (daycount(), raw_response)
         response = json.loads(raw_response)
         if response is None:
             raise ValueError("Got no response")
