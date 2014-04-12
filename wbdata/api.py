@@ -133,13 +133,13 @@ def convert_to_dataframe(data, column_name):
 
 
 def get_data(indicator, country="all", data_date=None, convert_date=False,
-             pandas=False, column_name="value"):
+             pandas=False, column_name="value", keep_levels=False):
     """
     Retrieve indicators for given countries and years
 
     :indicator: the desired indicator code
     :country: a country code, sequence of country codes, or "all" (default)
-    :date: the desired date as a datetime object or a 2-sequence with
+    :date: the desired date as a datetime object or a 2-tuple with
         start and end dates
     :convert_date: if True, convert date field to a datetime.datetime object.
     :pandas: if True, return results as a pandas Series.  The index will be the
@@ -147,6 +147,8 @@ def get_data(indicator, country="all", data_date=None, convert_date=False,
         only one date is specified, or a multi-index of country and date
         otherwise.
     :column_name: the desired name for the pandas column
+    :keep_levels: if True and pandas is True, don't reduce the number of
+        index levels returned if only getting one date or country
     :returns: list of dictionaries or pandas Series
     """
     query_url = COUNTRIES_URL
@@ -167,9 +169,9 @@ def get_data(indicator, country="all", data_date=None, convert_date=False,
         data = convert_dates_to_datetime(data)
     if pandas:
         df = convert_to_dataframe(data, column_name)
-        if len(df["country"]) == 1:
+        if not keep_levels and len(df["country"].unique()) == 1:
             df = df.set_index("date")
-        elif len(df["date"]) == 1:
+        elif not keep_levels and len(df["date"].unique()) == 1:
             df = df.set_index("country")
         else:
             df = df.set_index(["country", "date"])
@@ -393,7 +395,7 @@ def print_ids_and_names(objs):
 
 @uses_pandas
 def get_dataframe(indicators, country="all", data_date=None,
-                  convert_date=False):
+                  convert_date=False, keep_levels=False):
     """
     Convenience function to download a set of indicators and  merge them into a
         pandas DataFrame.  The index will be the same as if calls were made to
@@ -405,10 +407,13 @@ def get_dataframe(indicators, country="all", data_date=None,
     :data_date: the desired date as a datetime object or a 2-sequence with
         start and end dates
     :convert_date: if True, convert date field to a datetime.datetime object.
+    :keep_levels: if True and pandas is True, don't reduce the number of
+        index levels returned if only getting one date or country
     :returns: a pandas dataframe
     """
     to_df = {indicators[i]: get_data(i, country, data_date, convert_date,
-                                     pandas=True) for i in indicators}
+                                     pandas=True, keep_levels=keep_levels)
+             for i in indicators}
     return pd.DataFrame(to_df)
 
 
@@ -422,16 +427,16 @@ def get_panel(indicators, country="all", data_date=None, convert_date=False,
     :indicators: An dictionary where the keys are desired indicators and the
         values are the desired column names
     :country: a country code, sequence of country codes, or "all" (default)
-    :data_date: the desired date as a datetime object or a 2-sequence with
-        start and end dates
+    :data_date: a 2-sequence with start and end dates
     :convert_date: if True, convert date field to a datetime.datetime object.
     :items: which values to use as the Panel items.  One of "indicators",
         "countries", "dates"
     :major_axis: which values to use as major axis for each item.  One of
         "indicators", "countries", "dates"
-    :returns: a pandas dataframe
+    :returns: a pandas panel
     """
-    df = get_dataframe(indicators, country, data_date, convert_date)
+    df = get_dataframe(indicators, country, data_date, convert_date,
+                       keep_levels=True)
     if items == major_axis:
         raise ValueError("Cannot have the same value for items and major_axis")
     if items not in ("indicators", "countries", "dates"):
