@@ -101,6 +101,12 @@ class Cache(object):
             pickle.dump(self.cache, cachefile, protocol=2)
 
 CACHE = Cache()
+if not len(CACHE.cache)== 0:
+    try:
+        assert type(CACHE[tuple(CACHE.cache.keys())[0]]) == int
+    except AssertionError:
+        os.remove(CACHE.path)
+        CACHE = Cache()
 EXP = 7
 
 def daycount(date=None):
