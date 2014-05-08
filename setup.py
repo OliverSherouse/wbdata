@@ -1,13 +1,16 @@
 #!/usr/bin/env python
 
 import re
-from distutils.core import setup
+from setuptools import setup
 
 version = re.search(
     '^__version__\s*=\s*"(.*)"',
     open('wbdata/__init__.py').read(),
     re.M
     ).group(1)
+
+with open('requirements.txt') as f:
+    required = f.read().splitlines()
 
 setup(
     name='wbdata',
@@ -17,7 +20,7 @@ setup(
     packages=["wbdata"],
     url="https://github.com/oliversherouse/wbdata",
     description="A library to access World Bank data",
-    requires=["decorator"],
+    install_requires=required,
     long_description=open('README.rst').read(),
     classifiers=[
         "Development Status :: 4 - Beta",
