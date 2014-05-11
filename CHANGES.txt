@@ -2,3 +2,6 @@
 0.2.0, 10 Mar 2013 -- Added get_panel, cleaned up dataset, and changed to use
 index by default
 0.2.3, 12 Apr 2014 -- fixed index reducer, cache expiration
+0.2.5, 21 Apr 2014 -- fixed cache compatibility
+0.2.7, 10 May 2014 -- fixed install dependencies
+    (thanks to Ramiro Gómez for the patch!)
