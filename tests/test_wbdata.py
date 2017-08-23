@@ -133,6 +133,46 @@ class TestSearchFunctions(unittest.TestCase):
         wbdata.search_indicators("gdp")
 
 
+class TestGetSeries(unittest.TestCase):
+    def setUp(self):
+        self.indicator = "NY.GDP.MKTP.PP.KD"
+
+    def testOneCountry(self):
+        country = "USA"
+        series = wbdata.get_series(self.indicator, country=country)
+        assert series.index.name == 'date'
+
+    def testCountries(self):
+        countries = ['GBR', 'USA']
+        series = wbdata.get_series(self.indicator, country=countries)
+        assert (
+            sorted(set(series.index.get_level_values('country'))) ==
+            ['United Kingdom', 'United States']
+        )
+
+    def testDate(self):
+        data_date = datetime.datetime(2008, 1, 1)
+        series = wbdata.get_series(self.indicator, data_date=data_date)
+        assert series.index.name == 'country'
+
+    def testDateRange(self):
+        data_date = (datetime.datetime(2008, 1, 1),
+                     datetime.datetime(2010, 1, 1))
+        series = wbdata.get_series(self.indicator, data_date=data_date,
+                                   convert_date=True)
+        assert min(series.index.get_level_values('date')).year == 2008
+        assert max(series.index.get_level_values('date')).year == 2010
+
+    def testConvertDate(self):
+        series = wbdata.get_series(self.indicator, convert_date=True)
+        assert isinstance(series.index.get_level_values('date')[0],
+                          datetime.datetime)
+
+    def testColumnName(self):
+        series = wbdata.get_series(self.indicator, column_name='foo')
+        assert series.name == 'foo'
+
+
 class TestGetDataframe(unittest.TestCase):
     def setUp(self):
         self.indicators = {
@@ -156,59 +196,9 @@ class TestGetDataframe(unittest.TestCase):
     def testConvertDate(self):
         wbdata.get_dataframe(self.indicators, convert_date=True)
 
-
-class TestGetPanel(unittest.TestCase):
-    def setUp(self):
-        self.indicators = {
-            "NY.GDP.MKTP.PP.KD": "gdp",
-            "NY.GDP.PCAP.PP.KD": "gdppc",
-        }
-
-    def testCountries(self):
-        countries = ("USA", "GBR")
-        wbdata.get_panel(self.indicators, country=countries)
-
-    def testDate(self):
-        data_date = datetime.datetime(2008, 1, 1)
-        wbdata.get_panel(self.indicators, data_date=data_date)
-
-    def testDateRange(self):
-        data_date = (datetime.datetime(2008, 1, 1),
-                     datetime.datetime(2010, 1, 1))
-        wbdata.get_panel(self.indicators, data_date=data_date)
-
-    def testConvertDate(self):
-        wbdata.get_panel(self.indicators, convert_date=True)
-
-    def testIndicatorsCountries(self):
-        data_date = (datetime.datetime(2008, 1, 1),
-                     datetime.datetime(2010, 1, 1))
-        wbdata.get_panel(self.indicators, data_date=data_date,
-                         major_axis="countries")
-
-    def testCountriesDates(self):
-        data_date = (datetime.datetime(2008, 1, 1),
-                     datetime.datetime(2010, 1, 1))
-        wbdata.get_panel(self.indicators, data_date=data_date,
-                         items="countries")
-
-    def testCountriesIndicators(self):
-        data_date = (datetime.datetime(2008, 1, 1),
-                     datetime.datetime(2010, 1, 1))
-        wbdata.get_panel(self.indicators, data_date=data_date,
-                         items="countries", major_axis="indicators")
-
-    def testDatesCountries(self):
-        data_date = (datetime.datetime(2008, 1, 1),
-                     datetime.datetime(2010, 1, 1))
-        wbdata.get_panel(self.indicators, data_date=data_date,
-                         items="dates", major_axis="countries")
-
-    def testDatesIndicators(self):
-        data_date = (datetime.datetime(2008, 1, 1),
-                     datetime.datetime(2010, 1, 1))
-        wbdata.get_panel(self.indicators, data_date=data_date,
-                         items="dates", major_axis="indicators")
+    def testColumnName(self):
+        df = wbdata.get_dataframe(self.indicators)
+        assert tuple(sorted(df.columns)) == ('gdp', 'gdppc')
 
 
 if __name__ == '__main__':

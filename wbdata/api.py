@@ -6,6 +6,7 @@ from __future__ import (print_function, division, absolute_import,
                         unicode_literals)
 
 import datetime
+import warnings
 
 try:
     import pandas as pd
@@ -102,21 +103,38 @@ def cast_float(value):
     """
     try:
         return float(value)
-    except ValueError:
-        return None
-    except TypeError:
+    except (ValueError, TypeError):
         return None
 
 
-@uses_pandas
-def convert_to_dataframe(data, column_name):
+def get_series(indicator, country="all", data_date=None, convert_date=False,
+               column_name="value", keep_levels=False):
     """
-    Convert a set of values to a dataframe with columns for country and date
+    Retrieve indicators for given countries and years
+
+    :indicator: the desired indicator code
+    :country: a country code, sequence of country codes, or "all" (default)
+    :date: the desired date as a datetime object or a 2-tuple with
+        start and end dates
+    :convert_date: if True, convert date field to a datetime.datetime object.
+    :column_name: the desired name for the pandas column
+    :keep_levels: if True and pandas is True, don't reduce the number of
+        index levels returned if only getting one date or country
+    :returns: pandas Series
     """
-    return pd.DataFrame({"country": [i["country"]["value"] for i in data],
-                         "date": [i["date"] for i in data],
-                         column_name: [cast_float(i["value"]) for i in data]
-                         })
+    df = pd.DataFrame(
+        [[i['country']['value'], i['date'], i['value']]
+         for i in get_data(indicator, country, data_date, convert_date)],
+        columns=['country', 'date', column_name]
+    )
+    df[column_name] = df[column_name].map(cast_float)
+    if not keep_levels and len(df["country"].unique()) == 1:
+        df = df.set_index("date")
+    elif not keep_levels and len(df["date"].unique()) == 1:
+        df = df.set_index("country")
+    else:
+        df = df.set_index(["country", "date"])
+    return df[column_name]
 
 
 def get_data(indicator, country="all", data_date=None, convert_date=False,
@@ -129,15 +147,16 @@ def get_data(indicator, country="all", data_date=None, convert_date=False,
     :date: the desired date as a datetime object or a 2-tuple with
         start and end dates
     :convert_date: if True, convert date field to a datetime.datetime object.
-    :pandas: if True, return results as a pandas Series.  The index will be the
-        date of the data if only one country is specified, the countries if
-        only one date is specified, or a multi-index of country and date
-        otherwise.
-    :column_name: the desired name for the pandas column
-    :keep_levels: if True and pandas is True, don't reduce the number of
-        index levels returned if only getting one date or country
     :returns: list of dictionaries or pandas Series
     """
+    if pandas:
+        warnings.warn(
+            ("Argument 'pandas' is deprecated and will be removed in a future "
+             "version. Use get_series or get_dataframe instead."),
+            PendingDeprecationWarning
+        )
+        return get_series(indicator, country, data_date, convert_date,
+                          column_name, keep_levels)
     query_url = COUNTRIES_URL
     try:
         c_part = parse_value_or_iterable(country)
@@ -154,15 +173,6 @@ def get_data(indicator, country="all", data_date=None, convert_date=False,
     data = fetcher.fetch(query_url, args)
     if convert_date:
         data = convert_dates_to_datetime(data)
-    if pandas:
-        df = convert_to_dataframe(data, column_name)
-        if not keep_levels and len(df["country"].unique()) == 1:
-            df = df.set_index("date")
-        elif not keep_levels and len(df["date"].unique()) == 1:
-            df = df.set_index("country")
-        else:
-            df = df.set_index(["country", "date"])
-        return df[column_name]
     return data
 
 
@@ -394,54 +404,12 @@ def get_dataframe(indicators, country="all", data_date=None,
     :data_date: the desired date as a datetime object or a 2-sequence with
         start and end dates
     :convert_date: if True, convert date field to a datetime.datetime object.
-    :keep_levels: if True and pandas is True, don't reduce the number of
-        index levels returned if only getting one date or country
-    :returns: a pandas dataframe
+    :keep_levels: if True don't reduce the number of index levels returned if
+        only getting one date or country
+    :returns: a pandas DataFrame
     """
-    to_df = {indicators[i]: get_data(i, country, data_date, convert_date,
-                                     pandas=True, keep_levels=keep_levels)
-             for i in indicators}
-    return pd.DataFrame(to_df)
-
-
-@uses_pandas
-def get_panel(indicators, country="all", data_date=None, convert_date=False,
-              items="indicators", major_axis="dates"):
-    """
-    Convenience function to download a set of indicators and  merge them into a
-        pandas Panel.
-
-    :indicators: An dictionary where the keys are desired indicators and the
-        values are the desired column names
-    :country: a country code, sequence of country codes, or "all" (default)
-    :data_date: a 2-sequence with start and end dates
-    :convert_date: if True, convert date field to a datetime.datetime object.
-    :items: which values to use as the Panel items.  One of "indicators",
-        "countries", "dates"
-    :major_axis: which values to use as major axis for each item.  One of
-        "indicators", "countries", "dates"
-    :returns: a pandas panel
-    """
-    df = get_dataframe(indicators, country, data_date, convert_date,
-                       keep_levels=True)
-    if items == major_axis:
-        raise ValueError("Cannot have the same value for items and major_axis")
-    if items not in ("indicators", "countries", "dates"):
-        raise ValueError("Bad value for items")
-    if major_axis not in ("indicators", "countries", "dates"):
-        raise ValueError("Bad value for major_axis")
-    if items == "indicators":
-        if major_axis == "dates":
-            return pd.Panel({i: df[i].unstack(level=0) for i in df.columns})
-        return pd.Panel({i: df[i].unstack() for i in df})
-    if items == "countries":
-        if major_axis == "dates":
-            return pd.Panel({i: df.xs(i, level=0) for i in
-                             sorted(set(df.index.get_level_values(0)))})
-        return pd.Panel({i: df.xs(i, level=0).transpose() for i in
-                         sorted(set(df.index.get_level_values(0)))})
-    if major_axis == "countries":
-        return pd.Panel({i: df.xs(i, level=1) for i in
-                         sorted(set(df.index.get_level_values(1)))})
-    return pd.Panel({i: df.xs(i, level=1).transpose() for i in
-                     sorted(set(df.index.get_level_values(1)))})
+    return pd.DataFrame({
+        j: get_series(i, country, data_date, convert_date,
+                      keep_levels=keep_levels)
+        for i, j in indicators.items()
+    })
