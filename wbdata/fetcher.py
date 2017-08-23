@@ -2,21 +2,6 @@
 wbdata.fetcher: retrieve and cache queries
 """
 
-#Copyright (C) 2012-2013 Oliver Sherouse <Oliver DOT Sherouse AT gmail DOT com>
-
-#This program is free software; you can redistribute it and/or
-#modify it under the terms of the GNU General Public License
-#as published by the Free Software Foundation; either version 2
-#of the License, or (at your option) any later version.
-
-#This program is distributed in the hope that it will be useful,
-#but WITHOUT ANY WARRANTY; without even the implied warranty of
-#MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#GNU General Public License for more details.
-
-#You should have received a copy of the GNU General Public License
-#along with this program; if not. If not, see <http://www.gnu.org/licenses/>.
-
 from __future__ import (print_function, division, absolute_import,
                         unicode_literals)
 
@@ -100,14 +85,16 @@ class Cache(object):
         with open(self.path, 'wb') as cachefile:
             pickle.dump(self.cache, cachefile, protocol=2)
 
+
 CACHE = Cache()
-if not len(CACHE.cache)== 0:
+if not len(CACHE.cache) == 0:
     try:
         assert type(CACHE[tuple(CACHE.cache.keys())[0]]) == int
     except AssertionError:
         os.remove(CACHE.path)
         CACHE = Cache()
 EXP = 7
+
 
 def daycount(date=None):
     if date is None:
