@@ -6,9 +6,11 @@ from __future__ import (print_function, division, absolute_import,
                         unicode_literals)
 
 import logging
+import json
 import os
 import sys
 import datetime
+
 
 try:  # python 2
     import cPickle as pickle
@@ -87,36 +89,46 @@ def get_json_from_url(url, args):
     """
     Fetch a url directly from the World Bank, up to TRIES tries
 
-    :url: the  url to retrieve
-    :returns: a string with the url contents
+    : url: the  url to retrieve
+    : args: a dictionary of GET arguments
+    : returns: a string with the url contents
     """
     for i in range(TRIES):
         try:
-            return requests.get(url, args).json()
+            return requests.get(url, args).text
         except requests.ConnectionError:
             continue
     logging.error("Error connecting to {url}".format(url=url))
     raise RuntimeError("Couldn't connect to API")
 
 
-def get_json(url, args, cached):
+def get_response(url, args, cached=True):
+    """
+    Get single page response from World Bank API or from cache
+    : query_url: the base url to be queried
+    : args: a dictionary of GET arguments
+    : cached: use the cache
+    : returns: a dictionary with the response from the API
+    """
     key = (url, tuple(sorted(args.items())))
     if (cached and key in CACHE):
-        return CACHE[key]
+        response = CACHE[key]
     else:
         response = get_json_from_url(url, args)
         if cached:
             CACHE[key] = response
-        return response
+    return json.loads(response)
 
 
 def fetch(url, args=None, cached=True):
-    """fetch data from the World Bank API or from cache
+    """Fetch data from the World Bank API or from cache.
 
-    :query_url: the base url to be queried
-    :args: a dictionary of GET arguments
-    :cached: use the cache
-    :returns: a list of dictionaries containing the response to the query
+    Given the base url, keep fetching results until there are no more pages.
+
+    : query_url: the base url to be queried
+    : args: a dictionary of GET arguments
+    : cached: use the cache
+    : returns: a list of dictionaries containing the response to the query
     """
     if args is None:
         args = {}
@@ -127,13 +139,12 @@ def fetch(url, args=None, cached=True):
     results = []
     pages, this_page = 0, 1
     while pages != this_page:
-        response = get_json(url, args, cached=cached)
+        response = get_response(url, args, cached=cached)
         results.extend(response[1])
         this_page = response[0]['page']
         pages = response[0]['pages']
         logging.debug("Processed page {0} of {1}".format(this_page, pages))
         args['page'] = int(this_page) + 1
-
     for i in results:
         if "id" in i:
             i['id'] = i['id'].strip()
