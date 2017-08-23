@@ -78,6 +78,8 @@ def convert_dates_to_datetime(data):
     World Bank
     """
     first = data[0]['date']
+    if isinstance(first, datetime.datetime):
+        return data
     if "M" in first:
         converter = convert_month_to_datetime
     elif "Q" in first:
@@ -142,13 +144,13 @@ def get_data(indicator, country="all", data_date=None, convert_date=False,
     except TypeError:
         raise TypeError("'country' must be a string or iterable'")
     query_url = "/".join((query_url, c_part, "indicators", indicator))
-    args = []
+    args = {}
     if data_date:
         if type(data_date) is tuple:
             data_date_str = ":".join((i.strftime("%Y") for i in data_date))
-            args.append(("date", data_date_str))
+            args["date"] = data_date_str
         else:
-            args.append(("date", data_date.strftime("%Y")))
+            args["date"] = data_date.strftime("%Y")
     data = fetcher.fetch(query_url, args)
     if convert_date:
         data = convert_dates_to_datetime(data)
@@ -259,11 +261,11 @@ def get_country(country_id=None, incomelevel=None, lendingtype=None,
         if incomelevel or lendingtype:
             raise ValueError("Can't specify country_id and aggregates")
         return id_only_query(COUNTRIES_URL, country_id, display)
-    args = []
+    args = {}
     if incomelevel:
-        args.append(("incomeLevel", parse_value_or_iterable(incomelevel)))
+        args["incomeLevel"] = parse_value_or_iterable(incomelevel)
     if lendingtype:
-        args.append(("lendingType", parse_value_or_iterable(lendingtype)))
+        args["lendingType"] = parse_value_or_iterable(lendingtype)
     results = fetcher.fetch(COUNTRIES_URL, args)
     if display:
         print_ids_and_names(results)
