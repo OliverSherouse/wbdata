@@ -1,15 +1,28 @@
 #!/usr/bin/env python
-from __future__ import print_function, division, absolute_import
-from __future__ import unicode_literals
+from __future__ import (
+    print_function, division, absolute_import, unicode_literals
+)
+
 
 import datetime
-import logging
 import unittest
+import os.path
+import sys
+
+sys.path.append(
+    os.path.normpath(
+        os.path.join(
+            os.path.dirname(
+                os.path.abspath(__file__)
+            ),
+            '..',
+        )
+    )
+)
+
+print(sys.path[-1])
 
 import wbdata
-
-#logging.basicConfig(level=logging.DEBUG)
-logging.basicConfig(level=logging.INFO)
 
 
 class TestSimpleQueries(unittest.TestCase):
