@@ -30,7 +30,7 @@ class TestSimpleQueries(unittest.TestCase):
         wbdata.get_incomelevel()
 
     def testOneIncomeLevel(self):
-        wbdata.get_incomelevel("OEC")
+        wbdata.get_incomelevel("HIC")
 
     def testGetAllLendingTypes(self):
         wbdata.get_lendingtype()
@@ -58,8 +58,8 @@ class TestGetCountry(unittest.TestCase):
     def testUSA(self):
         wbdata.get_country(country_id="USA")
 
-    def testOEC(self):
-        wbdata.get_country(incomelevel="OEC")
+    def testHIC(self):
+        wbdata.get_country(incomelevel="HIC")
 
     def testIDB(self):
         wbdata.get_country(lendingtype="IDB")
