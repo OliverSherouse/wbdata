@@ -5,7 +5,6 @@ wbdata.fetcher: retrieve and cache queries
 from __future__ import (print_function, division, absolute_import,
                         unicode_literals)
 
-import json
 import logging
 import os
 import sys
@@ -13,18 +12,14 @@ import datetime
 
 try:  # python 2
     import cPickle as pickle
-
-    from urllib import urlencode
-    from urllib2 import URLError
-    from urllib2 import urlopen
 except ImportError:  # python 3
     import pickle
 
-    from urllib.request import urlopen
-    from urllib.error import URLError
-    from urllib.parse import urlencode
+import requests
 
+EXP = 7
 PER_PAGE = 1000
+TODAY = datetime.date.today()
 TRIES = 5
 
 
@@ -32,7 +27,6 @@ class Cache(object):
     """Docstring for Cache """
 
     def __init__(self):
-        """@todo: to be defined """
         self.__path = None
         self.__cache = None
 
@@ -60,21 +54,21 @@ class Cache(object):
         if self.__cache is None:
             try:
                 with open(self.path, 'rb') as cachefile:
-                    try:
-                        cache = pickle.load(cachefile, encoding="ascii",
-                                            errors="replace")
-                    except TypeError:
-                        cache = pickle.load(cachefile)
+                    cache = {
+                        i: (date, json)
+                        for i, (date, json) in pickle.load(cachefile).items()
+                        if (TODAY - datetime.date.fromordinal(date)).days < EXP
+                    }
             except IOError:
                 cache = {}
             self.__cache = cache
         return self.__cache
 
     def __getitem__(self, key):
-        return self.cache[key]
+        return self.cache[key][1]
 
     def __setitem__(self, key, value):
-        self.cache[key] = value
+        self.cache[key] = TODAY.toordinal(), value
         self.sync()
 
     def __contains__(self, item):
@@ -83,50 +77,40 @@ class Cache(object):
     def sync(self):
         """Sync cache to disk"""
         with open(self.path, 'wb') as cachefile:
-            pickle.dump(self.cache, cachefile, protocol=2)
+            pickle.dump(self.cache, cachefile)
 
 
 CACHE = Cache()
-if not len(CACHE.cache) == 0:
-    try:
-        assert type(CACHE[tuple(CACHE.cache.keys())[0]]) == int
-    except AssertionError:
-        os.remove(CACHE.path)
-        CACHE = Cache()
-EXP = 7
 
 
-def daycount(date=None):
-    if date is None:
-        date = datetime.datetime.today()
-    return (date - datetime.datetime(2000, 1, 1)).days
-
-
-def fetch_url(url):
+def get_json_from_url(url, args):
     """
     Fetch a url directly from the World Bank, up to TRIES tries
 
     :url: the  url to retrieve
     :returns: a string with the url contents
     """
-    response = None
     for i in range(TRIES):
         try:
-            query = urlopen(url)
-            response = query.read()
-            query.close()
-            break
-        except URLError:
+            return requests.get(url, args).json()
+        except requests.ConnectionError:
             continue
-    if response is None:
-        raise ValueError
-    try:
-        return str(response, encoding="ascii", errors="replace")
-    except TypeError:
-        return str(response)
+    logging.error("Error connecting to {url}".format(url=url))
+    raise RuntimeError("Couldn't connect to API")
 
 
-def fetch(query_url, args=None, cached=True):
+def get_json(url, args, cached):
+    key = (url, tuple(sorted(args.items())))
+    if (cached and key in CACHE):
+        return CACHE[key]
+    else:
+        response = get_json_from_url(url, args)
+        if cached:
+            CACHE[key] = response
+        return response
+
+
+def fetch(url, args=None, cached=True):
     """fetch data from the World Bank API or from cache
 
     :query_url: the base url to be queried
@@ -135,28 +119,20 @@ def fetch(query_url, args=None, cached=True):
     :returns: a list of dictionaries containing the response to the query
     """
     if args is None:
-        args = []
-    args.extend((("format", "json"), ("per_page", PER_PAGE)))
-    query_url = "?".join((query_url, urlencode(args)))
-    logging.debug("Query using {0}".format(query_url))
+        args = {}
+    else:
+        args = dict(args)
+    args["format"] = "json"
+    args["per_page"] = PER_PAGE
     results = []
-    original_url = query_url
     pages, this_page = 0, 1
     while pages != this_page:
-        if (cached and query_url in CACHE
-                and daycount() - CACHE[query_url][0] < EXP):
-            raw_response = CACHE[query_url][1]
-        else:
-            raw_response = fetch_url(query_url)
-            CACHE[query_url] = (daycount(), raw_response)
-        response = json.loads(raw_response)
-        if response is None:
-            raise ValueError("Got no response")
+        response = get_json(url, args, cached=cached)
         results.extend(response[1])
         this_page = response[0]['page']
         pages = response[0]['pages']
         logging.debug("Processed page {0} of {1}".format(this_page, pages))
-        query_url = original_url + "&page={0}".format(int(this_page) + 1)
+        args['page'] = int(this_page) + 1
 
     for i in results:
         if "id" in i:
