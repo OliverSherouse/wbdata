@@ -80,6 +80,8 @@ class Cache(object):
                                             errors="replace")
                     except TypeError:
                         cache = pickle.load(cachefile)
+                    except EOFError: # possible if cachefile exists but corrupted
+                        cache = {}
             except IOError:
                 cache = {}
             self.__cache = cache
