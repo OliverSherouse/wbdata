@@ -2,6 +2,7 @@ MANIFEST
 
 *.py[cod]
 .cache
+.pytest_cache/
 
 # C extensions
 *.so
