@@ -9,4 +9,5 @@ pandas = "*"
 decorator = "*"
 
 [dev-packages]
+pytest = "*"
 "pytest-flake8" = "*"
