@@ -1,4 +1,5 @@
 MANIFEST
+Pipfile.lock
 
 *.py[cod]
 .cache
