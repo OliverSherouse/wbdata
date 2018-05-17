@@ -4,8 +4,6 @@ python:
   - 3.4
   - 3.5
   - 3.6
-env:
-  - PIPENV_IGNORE_VIRTUALENVS=1
 before_install: pip install pipenv
 install: pipenv install --dev
-script: pipenv run pytest
+script: pipenv run python -m pytest
