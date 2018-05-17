@@ -1,11 +1,10 @@
 language: python
 python:
   - 2.7
-  - 3.4
   - 3.5
   - 3.6
-# command to install dependencies
-install: 
-  - pip install -r requirements.txt
-# command to run tests
-script: pytest
+env:
+  - PIPENV_IGNORE_VIRTUALENVS=1 
+before_install: pip install pipenv
+install: pipenv install --dev
+script: pipenv run pytest
