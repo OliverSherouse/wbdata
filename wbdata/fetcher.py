@@ -61,7 +61,7 @@ class Cache(object):
                         for i, (date, json) in pickle.load(cachefile).items()
                         if (TODAY - datetime.date.fromordinal(date)).days < EXP
                     }
-            except IOError:
+            except (IOError, EOFError):
                 cache = {}
             self.__cache = cache
         return self.__cache

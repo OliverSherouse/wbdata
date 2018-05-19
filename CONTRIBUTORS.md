@@ -4,3 +4,4 @@ Oliver Sherouse (@OliverSherouse)
 # Contributors
 
 * James Remeika (@remeika)
+* Dominic Kwok (@dominickwok)
