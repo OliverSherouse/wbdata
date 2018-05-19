@@ -110,6 +110,7 @@ def get_response(url, args, cached=True):
     : cached: use the cache
     : returns: a dictionary with the response from the API
     """
+    logging.debug('fetching {}'.format(url))
     key = (url, tuple(sorted(args.items())))
     if (cached and key in CACHE):
         response = CACHE[key]
@@ -140,6 +141,11 @@ def fetch(url, args=None, cached=True):
     pages, this_page = 0, 1
     while pages != this_page:
         response = get_response(url, args, cached=cached)
+        if response[1] is None:
+            raise RuntimeError(
+                'Received no Data from API. This indicator may be invalid or '
+                'no longer available'
+            )
         results.extend(response[1])
         this_page = response[0]['page']
         pages = response[0]['pages']
