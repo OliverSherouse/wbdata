@@ -10,4 +10,3 @@ decorator = "*"
 
 [dev-packages]
 "pytest-flake8" = "*"
-ipython = "*"
