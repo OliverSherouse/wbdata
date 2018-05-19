@@ -82,7 +82,7 @@ class TestGetIndicator(unittest.TestCase):
         wbdata.get_indicator()
 
     def testGetOneIndicator(self):
-        wbdata.get_indicator("SH.XPD.PRIV.ZS")
+        wbdata.get_indicator("SP.POP.TOTL")
 
     def testGetIndicatorBySource(self):
         wbdata.get_indicator(source=1)
@@ -97,31 +97,31 @@ class TestGetIndicator(unittest.TestCase):
 
 class TestGetData(unittest.TestCase):
     def testIndicator(self):
-        wbdata.get_data("SH.XPD.PRIV.ZS")
+        wbdata.get_data("SP.POP.TOTL")
 
     def testOneCountry(self):
-        wbdata.get_data("SH.XPD.PRIV.ZS", country="USA")
+        wbdata.get_data("SP.POP.TOTL", country="USA")
 
     def testTwoCountries(self):
-        wbdata.get_data("SH.XPD.PRIV.ZS", country=("chn", "bra"))
+        wbdata.get_data("SP.POP.TOTL", country=("chn", "bra"))
 
     def testDate(self):
-        wbdata.get_data("SH.XPD.PRIV.ZS", country="usa",
+        wbdata.get_data("SP.POP.TOTL", country="usa",
                         data_date=datetime.datetime(2006, 1, 1))
 
     def testDateRange(self):
-        wbdata.get_data("SH.XPD.PRIV.ZS", country="usa",
+        wbdata.get_data("SP.POP.TOTL", country="usa",
                         data_date=(datetime.datetime(2006, 1, 1),
                                    datetime.datetime(2010, 1, 1)))
 
     def testConvertDate(self):
-        wbdata.get_data("SH.XPD.PRIV.ZS", country="usa", convert_date=True)
+        wbdata.get_data("SP.POP.TOTL", country="usa", convert_date=True)
 
     def testPandas(self):
-        wbdata.get_data("SH.XPD.PRIV.ZS", country="usa", pandas=True)
+        wbdata.get_data("SP.POP.TOTL", country="usa", pandas=True)
 
     def testColumnName(self):
-        wbdata.get_data("SH.XPD.PRIV.ZS", country="usa", pandas=True,
+        wbdata.get_data("SP.POP.TOTL", country="usa", pandas=True,
                         column_name="IForget")
 
 
