@@ -234,6 +234,69 @@ And, since lower scores on that indicator mean more business-friendly
 regulations, that's exactly what we would expect. It goes without saying that
 we can use our data now to do any other analysis required.
 
+
+Usings Pandas DataFrames
+------------------------
+
+The ``get_dataframe()`` function returns a `DataFrame <http://pandas.pydata.org/pandas-docs/stable/dsintro.html#dataframe>`_ object, as implemented by the `Pandas data analysis library <https://pandas.pydata.org>`_. The dataframes returned by `wbdata` contain multiple indexes for the independent variables ``country``, ``name`` and ``date``.
+
+The following DataFrame contains two columns, ``doing_business`` and ``gdppc``, and two indices, ``country`` and ``date``:
+
+    >>> countries = [i['id'] for i in wbdata.get_country(incomelevel="LIC", display=False)]
+    >>> indicators = {"NY.GDP.PCAP.PP.KD": "gdppc"}
+    >>> df = wbdata.get_dataframe(indicators, country=countries, convert_date=True)
+    >>> print df
+                                gdppc
+    country     date                   
+    Afghanistan 2017-01-01          NaN
+                2016-01-01  1739.583177
+                2015-01-01  1747.978457
+                2014-01-01  1780.382366
+                2013-01-01  1814.155825
+                2012-01-01  1839.273579
+                2011-01-01  1660.739856
+    ...                             ...
+    Zimbabwe    1989-01-01          NaN
+                1988-01-01          NaN
+                1987-01-01          NaN
+    ...                             ...
+    [1798 rows x 1 columns]
+
+
+To select data for Afganistan, we can call:
+
+    >>> df.loc[(['Afghanistan']), :]
+                              gdppc
+    country     date                   
+    Afghanistan 2017-01-01          NaN
+                2016-01-01  1739.583177
+                2015-01-01  1747.978457
+                2014-01-01  1780.382366
+                2013-01-01  1814.155825
+                2012-01-01  1839.273579
+                2011-01-01  1660.739856
+                2010-01-01  1614.255001
+                2009-01-01  1531.173993
+                2008-01-01  1298.143159
+    ...                             ...
+
+And to select the 2016 value for all countries:
+
+    >>> df.loc[(slice(None),['2016-01-01']), :]
+                                                gdppc
+    country                   date                   
+    Afghanistan               2016-01-01  1739.583177
+    Burundi                   2016-01-01   721.176562
+    Benin                     2016-01-01  2009.961384
+    Burkina Faso              2016-01-01  1642.185834
+    Central African Republic  2016-01-01   647.880445
+    Congo, Dem. Rep.          2016-01-01   743.894342
+    Comoros                   2016-01-01  1411.152339
+    Eritrea                   2016-01-01          NaN
+    ...                             ...
+
+More details about working with multiple indices can be found `here <https://pandas.pydata.org/pandas-docs/stable/advanced.html#using-slicers>`_.
+
 Indices and tables
 ==================
 
