@@ -24,7 +24,7 @@ del(main)
 BASE_URL = "https://api.worldbank.org/v2"
 COUNTRIES_URL = "{0}/countries".format(BASE_URL)
 ILEVEL_URL = "{0}/incomeLevels".format(BASE_URL)
-INDICATOR_URL = "{0}/indicator".format(BASE_URL)
+INDICATOR_URL = "{0}/indicators".format(BASE_URL)
 LTYPE_URL = "{0}/lendingTypes".format(BASE_URL)
 SOURCES_URL = "{0}/sources".format(BASE_URL)
 TOPIC_URL = "{0}/topics".format(BASE_URL)
