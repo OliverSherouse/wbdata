@@ -21,7 +21,7 @@ import __main__ as main
 INTERACTIVE = not hasattr(main, "__file__")
 del(main)
 
-BASE_URL = "http://api.worldbank.org/v2"
+BASE_URL = "https://api.worldbank.org/v2"
 COUNTRIES_URL = "{0}/countries".format(BASE_URL)
 ILEVEL_URL = "{0}/incomeLevels".format(BASE_URL)
 INDICATOR_URL = "{0}/indicator".format(BASE_URL)
