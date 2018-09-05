@@ -5,3 +5,4 @@ Oliver Sherouse (@OliverSherouse)
 
 * James Remeika (@remeika)
 * Dominic Kwok (@dominickwok)
+* David Lemayian (@DavidLemayian)
