@@ -160,7 +160,7 @@ bunch of other countries:
 "USA". Very creative.  Thank you, World Bank.  But in any case, let's get our
 data:
 
-    >>> wbdata.get_data("IC.BUS.EASE.XQ", country=USA)
+    >>> wbdata.get_data("IC.BUS.EASE.XQ", country="USA")
 
 And that will return a big long list of dictionaries with all the relevant
 data and metadata as organized by the World Bank.  Now let's say we want to
