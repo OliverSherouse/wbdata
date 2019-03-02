@@ -175,7 +175,7 @@ And we get another long list of dictionaries, which we can parse any which way
 we please.
 
 So let's get a little bit more econometric. Let's say we want to fetch this
-same indicator, but also gdp per capita and for all OECD countries.  Let's find
+same indicator, but also GDP per capita and for all high-income countries.  Let's find
 the other indicator we want using another convenience search function:
 
     >>> wbdata.search_indicators("gdp per capita")
@@ -195,40 +195,42 @@ the other indicator we want using another convenience search function:
 
 Like good economists, we'll use the one that seems most impressive: GDP per
 Capita at PPP in constant 2005 dollars, which has the id "NY.GDP.PCAP.PP.KD".
-But what about using OECD countries?
+But what about using high-income countries?
 
     >>> wbdata.get_incomelevel()
     HIC	High income
-    HPC	Heavily indebted poor countries (HIPC)
     INX	Not classified
     LIC	Low income
     LMC	Lower middle income
     LMY	Low & middle income
     MIC	Middle income
-    NOC	High income: nonOECD
-    OEC	High income: OECD
     UMC	Upper middle income
 
 Funtastic.  Finally, let's make sure we get our data into a lovely merged
 pandas DataFrame, suitable for analysis with that library, statsmodels, or
 whatever else we'd like.
 
-    >>> countries = [i['id'] for i in wbdata.get_country(incomelevel="OEC", display=False)]
+    >>> countries = [i['id'] for i in wbdata.get_country(incomelevel="HIC", display=False)]
     >>> indicators = {"IC.BUS.EASE.XQ": "doing_business", "NY.GDP.PCAP.PP.KD": "gdppc"}
     >>> df = wbdata.get_dataframe(indicators, country=countries, convert_date=True)
     >>> df.describe()
-                gdppc  doing_business
-    count    943.000000       62.000000
-    mean   25394.219689       29.322581
-    std     9495.732499       21.946861
-    min     5543.572247        3.000000
-    25%    19278.418595       11.000000
-    50%    24640.540261       27.500000
-    75%    30655.760574       41.000000
-    max    74021.456759       89.000000
-    >>> df = df.dropna()
-    >>> df.gdppc.corr(df.doing_business)
-    -0.2858022507189249
+      doing_business          gdppc
+    count  58.000000    1667.000000
+    mean   50.982759   36822.636670
+    std    38.092911   20908.168884
+    min    1.000000     7855.027176
+    25%    19.500000   22610.617293
+    50%    41.000000   32990.761454
+    75%    78.750000   43493.284108
+    max    140.000000 135318.754421
+    # doing_business is only available for 2018, and gdppc is only available for prior years,
+    # so let's merge the latest of each to calculate the correlation.
+    >>> df.reset_index(inplace=True)
+    >>> doing_business = df[df.date == '2018-01-01'][['country', 'doing_business']]
+    >>> gdppc = df[df.date == '2017-01-01'][['country', 'gdppc']]
+    >>> cordf = doing_business.merge(gdppc, on='country').dropna()
+    >>> cordf.gdppc.corr(cordf.doing_business)
+    -0.28564209578712124
 
 And, since lower scores on that indicator mean more business-friendly
 regulations, that's exactly what we would expect. It goes without saying that
