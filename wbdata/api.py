@@ -2,8 +2,12 @@
 wbdata.api: Where all the functions go
 """
 
-from __future__ import (print_function, division, absolute_import,
-                        unicode_literals)
+from __future__ import (
+    print_function,
+    division,
+    absolute_import,
+    unicode_literals,
+)
 
 import datetime
 import warnings
@@ -18,8 +22,9 @@ from . import fetcher
 
 # Detect Interactivity
 import __main__ as main
+
 INTERACTIVE = not hasattr(main, "__file__")
-del(main)
+del main
 
 BASE_URL = "https://api.worldbank.org/v2"
 COUNTRIES_URL = "{0}/countries".format(BASE_URL)
@@ -78,7 +83,7 @@ def convert_dates_to_datetime(data):
     Return a datetime.datetime object from a date string as provided by the
     World Bank
     """
-    first = data[0]['date']
+    first = data[0]["date"]
     if isinstance(first, datetime.datetime):
         return data
     if "M" in first:
@@ -88,12 +93,12 @@ def convert_dates_to_datetime(data):
     else:
         converter = convert_year_to_datetime
     for datum in data:
-        datum_date = datum['date']
+        datum_date = datum["date"]
         if "MRV" in datum_date:
             continue
         if "-" in datum_date:
             continue
-        datum['date'] = converter(datum_date)
+        datum["date"] = converter(datum_date)
     return data
 
 
@@ -107,8 +112,14 @@ def cast_float(value):
         return None
 
 
-def get_series(indicator, country="all", data_date=None, convert_date=False,
-               column_name="value", keep_levels=False):
+def get_series(
+    indicator,
+    country="all",
+    data_date=None,
+    convert_date=False,
+    column_name="value",
+    keep_levels=False,
+):
     """
     Retrieve indicators for given countries and years
 
@@ -123,9 +134,11 @@ def get_series(indicator, country="all", data_date=None, convert_date=False,
     :returns: pandas Series
     """
     df = pd.DataFrame(
-        [[i['country']['value'], i['date'], i['value']]
-         for i in get_data(indicator, country, data_date, convert_date)],
-        columns=['country', 'date', column_name]
+        [
+            [i["country"]["value"], i["date"], i["value"]]
+            for i in get_data(indicator, country, data_date, convert_date)
+        ],
+        columns=["country", "date", column_name],
     )
     df[column_name] = df[column_name].map(cast_float)
     if not keep_levels and len(df["country"].unique()) == 1:
@@ -137,8 +150,15 @@ def get_series(indicator, country="all", data_date=None, convert_date=False,
     return df[column_name]
 
 
-def get_data(indicator, country="all", data_date=None, convert_date=False,
-             pandas=False, column_name="value", keep_levels=False):
+def get_data(
+    indicator,
+    country="all",
+    data_date=None,
+    convert_date=False,
+    pandas=False,
+    column_name="value",
+    keep_levels=False,
+):
     """
     Retrieve indicators for given countries and years
 
@@ -151,12 +171,20 @@ def get_data(indicator, country="all", data_date=None, convert_date=False,
     """
     if pandas:
         warnings.warn(
-            ("Argument 'pandas' is deprecated and will be removed in a future "
-             "version. Use get_series or get_dataframe instead."),
-            PendingDeprecationWarning
+            (
+                "Argument 'pandas' is deprecated and will be removed in a "
+                "future version. Use get_series or get_dataframe instead."
+            ),
+            PendingDeprecationWarning,
         )
-        return get_series(indicator, country, data_date, convert_date,
-                          column_name, keep_levels)
+        return get_series(
+            indicator,
+            country,
+            data_date,
+            convert_date,
+            column_name,
+            keep_levels,
+        )
     query_url = COUNTRIES_URL
     try:
         c_part = parse_value_or_iterable(country)
@@ -250,8 +278,9 @@ def get_lendingtype(type_id=None, display=None):
     return id_only_query(LTYPE_URL, type_id, display)
 
 
-def get_country(country_id=None, incomelevel=None, lendingtype=None,
-                display=None):
+def get_country(
+    country_id=None, incomelevel=None, lendingtype=None, display=None
+):
     """
     Retrieve information on a country or regional aggregate.  Can specify
     either country_id, or the aggregates, but not both
@@ -302,16 +331,19 @@ def get_indicator(indicator=None, source=None, topic=None, display=None):
     if indicator:
         if source or topic:
             raise ValueError(INDIC_ERROR)
-        query_url = "/".join((INDICATOR_URL,
-                              parse_value_or_iterable(indicator)))
+        query_url = "/".join(
+            (INDICATOR_URL, parse_value_or_iterable(indicator))
+        )
     elif source:
         if topic:
             raise ValueError(INDIC_ERROR)
-        query_url = "/".join((SOURCES_URL, parse_value_or_iterable(source),
-                              "indicators"))
+        query_url = "/".join(
+            (SOURCES_URL, parse_value_or_iterable(source), "indicators")
+        )
     elif topic:
-        query_url = "/".join((TOPIC_URL, parse_value_or_iterable(topic),
-                              "indicators"))
+        query_url = "/".join(
+            (TOPIC_URL, parse_value_or_iterable(topic), "indicators")
+        )
     else:
         query_url = INDICATOR_URL
     results = fetcher.fetch(query_url)
@@ -360,8 +392,9 @@ def search_countries(query, incomelevel=None, lendingtype=None, display=None):
     """
     if display is None:
         display = INTERACTIVE
-    countries = get_country(incomelevel=incomelevel, lendingtype=lendingtype,
-                            display=False)
+    countries = get_country(
+        incomelevel=incomelevel, lendingtype=lendingtype, display=False
+    )
     lower = query.lower()
     matched = [i for i in countries if lower in i["name"].lower()]
     if display:
@@ -378,7 +411,7 @@ def print_ids_and_names(objs):
     :objs: a list of dictionary objects as returned by wbdata
     """
     try:
-        max_length = str(max((len(i['id']) for i in objs)))
+        max_length = str(max((len(i["id"]) for i in objs)))
     except ValueError:
         return
     for i in objs:
@@ -391,8 +424,13 @@ def print_ids_and_names(objs):
 
 
 @uses_pandas
-def get_dataframe(indicators, country="all", data_date=None,
-                  convert_date=False, keep_levels=False):
+def get_dataframe(
+    indicators,
+    country="all",
+    data_date=None,
+    convert_date=False,
+    keep_levels=False,
+):
     """
     Convenience function to download a set of indicators and  merge them into a
         pandas DataFrame.  The index will be the same as if calls were made to
@@ -408,8 +446,11 @@ def get_dataframe(indicators, country="all", data_date=None,
         only getting one date or country
     :returns: a pandas DataFrame
     """
-    return pd.DataFrame({
-        j: get_series(i, country, data_date, convert_date,
-                      keep_levels=keep_levels)
-        for i, j in indicators.items()
-    })
+    return pd.DataFrame(
+        {
+            j: get_series(
+                i, country, data_date, convert_date, keep_levels=keep_levels
+            )
+            for i, j in indicators.items()
+        }
+    )
