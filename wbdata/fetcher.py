@@ -2,8 +2,12 @@
 wbdata.fetcher: retrieve and cache queries
 """
 
-from __future__ import (print_function, division, absolute_import,
-                        unicode_literals)
+from __future__ import (
+    print_function,
+    division,
+    absolute_import,
+    unicode_literals,
+)
 
 import logging
 import json
@@ -38,14 +42,20 @@ class Cache(object):
             # Inspiration for below from Trent Mick and Sridhar Ratnakumar
             # <http://pypi.python.org/pypi/appdirs/1.2.0>
             if sys.platform.startswith("win"):
-                basedir = os.path.join(os.getenv("LOCALAPPDATA", os.getenv(
-                    "APPDATA", os.path.expanduser("~"))), "wbdata")
-            elif sys.platform is "darwin":
-                basedir = os.path.expanduser('~/Library/Caches')
+                basedir = os.path.join(
+                    os.getenv(
+                        "LOCALAPPDATA",
+                        os.getenv("APPDATA", os.path.expanduser("~")),
+                    ),
+                    "wbdata",
+                )
+            elif sys.platform == "darwin":
+                basedir = os.path.expanduser("~/Library/Caches")
             else:
-                basedir = os.getenv('XDG_CACHE_HOME',
-                                    os.path.expanduser('~/.cache'))
-            cachedir = os.path.join(basedir, 'wbdata')
+                basedir = os.getenv(
+                    "XDG_CACHE_HOME", os.path.expanduser("~/.cache")
+                )
+            cachedir = os.path.join(basedir, "wbdata")
             if not os.path.exists(cachedir):
                 os.makedirs(cachedir)
             self.__path = os.path.join(cachedir, "cache")
@@ -55,7 +65,7 @@ class Cache(object):
     def cache(self):
         if self.__cache is None:
             try:
-                with open(self.path, 'rb') as cachefile:
+                with open(self.path, "rb") as cachefile:
                     cache = {
                         i: (date, json)
                         for i, (date, json) in pickle.load(cachefile).items()
@@ -78,7 +88,7 @@ class Cache(object):
 
     def sync(self):
         """Sync cache to disk"""
-        with open(self.path, 'wb') as cachefile:
+        with open(self.path, "wb") as cachefile:
             pickle.dump(self.cache, cachefile)
 
 
@@ -110,9 +120,9 @@ def get_response(url, args, cached=True):
     : cached: use the cache
     : returns: a dictionary with the response from the API
     """
-    logging.debug('fetching {}'.format(url))
+    logging.debug("fetching {}".format(url))
     key = (url, tuple(sorted(args.items())))
-    if (cached and key in CACHE):
+    if cached and key in CACHE:
         response = CACHE[key]
     else:
         response = get_json_from_url(url, args)
@@ -143,15 +153,15 @@ def fetch(url, args=None, cached=True):
         response = get_response(url, args, cached=cached)
         if response[1] is None:
             raise RuntimeError(
-                'Received no Data from API. This indicator may be invalid or '
-                'no longer available'
+                "Received no Data from API. This indicator may be invalid or "
+                "no longer available"
             )
         results.extend(response[1])
-        this_page = response[0]['page']
-        pages = response[0]['pages']
+        this_page = response[0]["page"]
+        pages = response[0]["pages"]
         logging.debug("Processed page {0} of {1}".format(this_page, pages))
-        args['page'] = int(this_page) + 1
+        args["page"] = int(this_page) + 1
     for i in results:
         if "id" in i:
-            i['id'] = i['id'].strip()
+            i["id"] = i["id"].strip()
     return results

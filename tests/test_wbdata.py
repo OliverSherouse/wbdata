@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 from __future__ import (
-    print_function, division, absolute_import, unicode_literals
+    print_function,
+    division,
+    absolute_import,
+    unicode_literals,
 )
 
 
@@ -11,18 +14,13 @@ import sys
 
 sys.path.append(
     os.path.normpath(
-        os.path.join(
-            os.path.dirname(
-                os.path.abspath(__file__)
-            ),
-            '..',
-        )
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
     )
 )
 
 print(sys.path[-1])
 
-import wbdata
+import wbdata  # noqa
 
 
 class TestSimpleQueries(unittest.TestCase):
@@ -106,13 +104,21 @@ class TestGetData(unittest.TestCase):
         wbdata.get_data("SP.POP.TOTL", country=("chn", "bra"))
 
     def testDate(self):
-        wbdata.get_data("SP.POP.TOTL", country="usa",
-                        data_date=datetime.datetime(2006, 1, 1))
+        wbdata.get_data(
+            "SP.POP.TOTL",
+            country="usa",
+            data_date=datetime.datetime(2006, 1, 1),
+        )
 
     def testDateRange(self):
-        wbdata.get_data("SP.POP.TOTL", country="usa",
-                        data_date=(datetime.datetime(2006, 1, 1),
-                                   datetime.datetime(2010, 1, 1)))
+        wbdata.get_data(
+            "SP.POP.TOTL",
+            country="usa",
+            data_date=(
+                datetime.datetime(2006, 1, 1),
+                datetime.datetime(2010, 1, 1),
+            ),
+        )
 
     def testConvertDate(self):
         wbdata.get_data("SP.POP.TOTL", country="usa", convert_date=True)
@@ -121,8 +127,9 @@ class TestGetData(unittest.TestCase):
         wbdata.get_data("SP.POP.TOTL", country="usa", pandas=True)
 
     def testColumnName(self):
-        wbdata.get_data("SP.POP.TOTL", country="usa", pandas=True,
-                        column_name="IForget")
+        wbdata.get_data(
+            "SP.POP.TOTL", country="usa", pandas=True, column_name="IForget"
+        )
 
 
 class TestSearchFunctions(unittest.TestCase):
@@ -140,37 +147,41 @@ class TestGetSeries(unittest.TestCase):
     def testOneCountry(self):
         country = "USA"
         series = wbdata.get_series(self.indicator, country=country)
-        assert series.index.name == 'date'
+        assert series.index.name == "date"
 
     def testCountries(self):
-        countries = ['GBR', 'USA']
+        countries = ["GBR", "USA"]
         series = wbdata.get_series(self.indicator, country=countries)
-        assert (
-            sorted(set(series.index.get_level_values('country'))) ==
-            ['United Kingdom', 'United States']
-        )
+        assert sorted(set(series.index.get_level_values("country"))) == [
+            "United Kingdom",
+            "United States",
+        ]
 
     def testDate(self):
         data_date = datetime.datetime(2008, 1, 1)
         series = wbdata.get_series(self.indicator, data_date=data_date)
-        assert series.index.name == 'country'
+        assert series.index.name == "country"
 
     def testDateRange(self):
-        data_date = (datetime.datetime(2008, 1, 1),
-                     datetime.datetime(2010, 1, 1))
-        series = wbdata.get_series(self.indicator, data_date=data_date,
-                                   convert_date=True)
-        assert min(series.index.get_level_values('date')).year == 2008
-        assert max(series.index.get_level_values('date')).year == 2010
+        data_date = (
+            datetime.datetime(2008, 1, 1),
+            datetime.datetime(2010, 1, 1),
+        )
+        series = wbdata.get_series(
+            self.indicator, data_date=data_date, convert_date=True
+        )
+        assert min(series.index.get_level_values("date")).year == 2008
+        assert max(series.index.get_level_values("date")).year == 2010
 
     def testConvertDate(self):
         series = wbdata.get_series(self.indicator, convert_date=True)
-        assert isinstance(series.index.get_level_values('date')[0],
-                          datetime.datetime)
+        assert isinstance(
+            series.index.get_level_values("date")[0], datetime.datetime
+        )
 
     def testColumnName(self):
-        series = wbdata.get_series(self.indicator, column_name='foo')
-        assert series.name == 'foo'
+        series = wbdata.get_series(self.indicator, column_name="foo")
+        assert series.name == "foo"
 
 
 class TestGetDataframe(unittest.TestCase):
@@ -189,8 +200,10 @@ class TestGetDataframe(unittest.TestCase):
         wbdata.get_dataframe(self.indicators, data_date=data_date)
 
     def testDateRange(self):
-        data_date = (datetime.datetime(2008, 1, 1),
-                     datetime.datetime(2010, 1, 1))
+        data_date = (
+            datetime.datetime(2008, 1, 1),
+            datetime.datetime(2010, 1, 1),
+        )
         wbdata.get_dataframe(self.indicators, data_date=data_date)
 
     def testConvertDate(self):
@@ -198,8 +211,8 @@ class TestGetDataframe(unittest.TestCase):
 
     def testColumnName(self):
         df = wbdata.get_dataframe(self.indicators)
-        assert tuple(sorted(df.columns)) == ('gdp', 'gdppc')
+        assert tuple(sorted(df.columns)) == ("gdp", "gdppc")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

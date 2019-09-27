@@ -1,11 +1,10 @@
 language: python
 python:
-  - 2.7
-  - 3.5
-  - 3.6
-  - 3.7
-env:
-  - PIPENV_IGNORE_VIRTUALENVS=1 
-before_install: pip install pipenv
-install: pipenv install --dev
-script: pipenv run pytest
+  - "3.5"
+  - "3.6"
+  - "3.7"
+install:
+  - curl -sSL https://raw.githubusercontent.com/sdispater/poetry/master/get-poetry.py | python
+  - source $HOME/.poetry/env
+  - poetry install -E pandas
+script: poetry run pytest
