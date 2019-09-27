@@ -3,7 +3,10 @@ wbdata.api: Where all the functions go
 """
 
 import datetime
+import re
 import warnings
+
+import tabulate
 
 try:
     import pandas as pd
@@ -348,7 +351,7 @@ def get_indicator(indicator=None, source=None, topic=None, display=None):
 
 def search_indicators(query, source=None, topic=None, display=None):
     """
-    Search indicators for a certain term.  Very simple.  Only one of source or
+    Search indicators for a certain regular expression.  Only one of source or
     topic can be specified. In interactive mode, will return None and print
     ids and names unless suppress_printing is True.
 
@@ -363,8 +366,8 @@ def search_indicators(query, source=None, topic=None, display=None):
     if display is None:
         display = INTERACTIVE
     indicators = get_indicator(source=source, topic=topic, display=False)
-    lower = query.lower()
-    matched = [i for i in indicators if lower in i["name"].lower()]
+    pattern = re.compile(query, re.IGNORECASE)
+    matched = [i for i in indicators if pattern.search(i["name"].lower())]
     if display:
         print_ids_and_names(matched)
     else:
@@ -388,8 +391,8 @@ def search_countries(query, incomelevel=None, lendingtype=None, display=None):
     countries = get_country(
         incomelevel=incomelevel, lendingtype=lendingtype, display=False
     )
-    lower = query.lower()
-    matched = [i for i in countries if lower in i["name"].lower()]
+    pattern = re.compile(query, re.IGNORECASE)
+    matched = [i for i in countries if pattern.search(i["name"].lower())]
     if display:
         print_ids_and_names(matched)
     else:
@@ -404,16 +407,21 @@ def print_ids_and_names(objs):
     :objs: a list of dictionary objects as returned by wbdata
     """
     try:
-        max_length = str(max((len(i["id"]) for i in objs)))
-    except ValueError:
-        return
-    for i in objs:
-        try:
-            templ = "{id:" + max_length + "}\t{name}"
-            print(templ.format(**i))
-        except KeyError:
-            templ = "{id:" + max_length + "}\t{value}"
-            print(templ.format(**i))
+        print(
+            tabulate.tabulate(
+                [[o["id"], o["name"]] for o in objs],
+                headers=["id", "name"],
+                tablefmt="simple",
+            )
+        )
+    except KeyError:
+        print(
+            tabulate.tabulate(
+                [[o["id"], o["value"]] for o in objs],
+                headers=["id", "value"],
+                tablefmt="simple",
+            )
+        )
 
 
 @uses_pandas
