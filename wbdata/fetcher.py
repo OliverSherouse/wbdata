@@ -2,24 +2,12 @@
 wbdata.fetcher: retrieve and cache queries
 """
 
-from __future__ import (
-    print_function,
-    division,
-    absolute_import,
-    unicode_literals,
-)
-
 import logging
 import json
 import os
+import pickle
 import sys
 import datetime
-
-
-try:  # python 2
-    import cPickle as pickle
-except ImportError:  # python 3
-    import pickle
 
 import requests
 

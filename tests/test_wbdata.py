@@ -1,11 +1,4 @@
-#!/usr/bin/env python
-from __future__ import (
-    print_function,
-    division,
-    absolute_import,
-    unicode_literals,
-)
-
+#!/usr/bin/env python3
 
 import datetime
 import unittest

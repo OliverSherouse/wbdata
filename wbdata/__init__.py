@@ -2,13 +2,6 @@
 wbdata: A wrapper for the World Bank API
 """
 
-from __future__ import (
-    print_function,
-    division,
-    absolute_import,
-    unicode_literals,
-)
-
 from .api import (
     get_country,
     get_data,

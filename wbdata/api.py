@@ -2,13 +2,6 @@
 wbdata.api: Where all the functions go
 """
 
-from __future__ import (
-    print_function,
-    division,
-    absolute_import,
-    unicode_literals,
-)
-
 import datetime
 import warnings
 
