@@ -1,7 +1,7 @@
 name: Run Tests
 on: 
-  push
-  pull
+  push:
+  pull-request:
   schedule:
     - cron: "1 1 1 * *"
 jobs:
