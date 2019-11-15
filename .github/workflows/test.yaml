@@ -14,7 +14,8 @@ jobs:
     steps:
       - uses: actions/checkout@v1
       - uses: actions/setup-python@v1.1.1
-        with: python-version: ${{ matrix.python-version }}
+        with:
+          python-version: ${{ matrix.python-version }}
       - run: |
           python -m pip install --user poetry
           poetry install -E pandas
