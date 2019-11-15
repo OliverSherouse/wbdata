@@ -6,18 +6,22 @@ on:
     - cron: "1 1 1 * *"
 jobs:
   test:
+    name: Tests
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         python-version: ['3.5', '3.6', '3.7']
         os: ['ubuntu-latest', 'macos-latest', 'windows-latest']
     steps:
-      - uses: actions/checkout@v1
-      - uses: actions/setup-python@v1.1.1
+      - name: Checkout
+        uses: actions/checkout@v1
+      - name: Setup Python
+        uses: actions/setup-python@v1.1.1
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install Poetry
         uses: dschep/install-poetry-action@v1.2
-      - run: |
-          poetry install -E pandas
-          poetry run pytest
+      - name: Install Dependencies
+        run: poetry install -E pandas
+      - name: Run Tests
+        run: poetry run pytest
