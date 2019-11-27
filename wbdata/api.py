@@ -150,6 +150,7 @@ def get_data(
     indicator,
     country="all",
     data_date=None,
+    source=None,
     convert_date=False,
     pandas=False,
     column_name="value",
@@ -160,8 +161,10 @@ def get_data(
 
     :indicator: the desired indicator code
     :country: a country code, sequence of country codes, or "all" (default)
-    :date: the desired date as a datetime object or a 2-tuple with
+    :data_date: the desired date as a datetime object or a 2-tuple with
         start and end dates
+    :source: the specific source to retrieve data from (defaults on API to 2,
+        World Development Indicators
     :convert_date: if True, convert date field to a datetime.datetime object.
     :returns: list of dictionaries or pandas Series
     """
@@ -194,6 +197,8 @@ def get_data(
             args["date"] = data_date_str
         else:
             args["date"] = data_date.strftime("%Y")
+    if source:
+        args["source"] = source
     data = fetcher.fetch(query_url, args)
     if convert_date:
         data = convert_dates_to_datetime(data)
