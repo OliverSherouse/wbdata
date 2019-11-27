@@ -1,9 +1,9 @@
 # wbdata
 
-| Branch | Status                                                                                                                                |
-|--------|---------------------------------------------------------------------------------------------------------------------------------------|
-| master | [![master branch status](https://travis-ci.org/OliverSherouse/wbdata.svg?branch=master)](https://travis-ci.org/OliverSherouse/wbdata) |
-| dev    | [![dev branch status](https://travis-ci.org/OliverSherouse/wbdata.svg?branch=dev)](https://travis-ci.org/OliverSherouse/wbdata)       |
+| Branch | Status                                                                                                                                                                                                     |
+|--------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| master | [![master branch status](https://github.com/OliverSherouse/wbdata/workflows/Tests/badge.svg?branch=master)](https://github.com/OliverSherouse/wbdata/actions?query=workflow%3A%22Tests%22+branch%3Amaster) |
+| dev    | [![dev branch status](https://github.com/OliverSherouse/wbdata/workflows/Tests/badge.svg?branch=dev)](https://github.com/OliverSherouse/wbdata/actions?query=workflow%3A%22Tests%22+branch%3Adev)          |
 
 Wbdata is a simple python interface to find and request information from the
 World Bank's various databases, either as a dictionary containing full metadata
