@@ -140,6 +140,7 @@ def fetch(url, args=None, cached=True):
     while pages != this_page:
         response = get_response(url, args, cached=cached)
         if response[1] is None:
+            logging.debug(response)
             raise RuntimeError(
                 "Received no Data from API. This indicator may be invalid or "
                 "no longer available"

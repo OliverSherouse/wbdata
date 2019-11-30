@@ -132,7 +132,12 @@ def get_series(
     df = pd.DataFrame(
         [
             [i["country"]["value"], i["date"], i["value"]]
-            for i in get_data(indicator, country, data_date, convert_date)
+            for i in get_data(
+                indicator=indicator,
+                country=country,
+                data_date=data_date,
+                convert_date=convert_date,
+            )
         ],
         columns=["country", "date", column_name],
     )
@@ -177,12 +182,12 @@ def get_data(
             PendingDeprecationWarning,
         )
         return get_series(
-            indicator,
-            country,
-            data_date,
-            convert_date,
-            column_name,
-            keep_levels,
+            indicator=indicator,
+            country=country,
+            data_date=data_date,
+            convert_date=convert_date,
+            column_name=column_name,
+            keep_levels=keep_levels,
         )
     query_url = COUNTRIES_URL
     try:
@@ -455,7 +460,11 @@ def get_dataframe(
     return pd.DataFrame(
         {
             j: get_series(
-                i, country, data_date, convert_date, keep_levels=keep_levels
+                indicator=i,
+                country=country,
+                data_date=data_date,
+                convert_date=convert_date,
+                keep_levels=keep_levels,
             )
             for i, j in indicators.items()
         }
