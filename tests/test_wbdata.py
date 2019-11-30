@@ -188,6 +188,22 @@ class TestGetSeries(unittest.TestCase):
             series.index.get_level_values("date")[0], datetime.datetime
         )
 
+    def testSource(self):
+        data2 = wbdata.get_series(
+            "NY.GDP.MKTP.CD",
+            source=2,
+            data_date=datetime.datetime(2010, 1, 1),
+            country="ERI",
+        )
+        assert data2.iloc[0] == 2117039512.19512
+        data11 = wbdata.get_series(
+            "NY.GDP.MKTP.CD",
+            source=11,
+            data_date=datetime.datetime(2010, 1, 1),
+            country="ERI",
+        )
+        assert data11.iloc[0] == 2117008130.0813
+
     def testColumnName(self):
         series = wbdata.get_series(self.indicator, column_name="foo")
         assert series.name == "foo"
@@ -221,6 +237,22 @@ class TestGetDataframe(unittest.TestCase):
     def testColumnName(self):
         df = wbdata.get_dataframe(self.indicators)
         assert tuple(sorted(df.columns)) == ("gdp", "gdppc")
+
+    def testSource(self):
+        data2 = wbdata.get_dataframe(
+            {"NY.GDP.MKTP.CD": "gdp"},
+            source=2,
+            data_date=datetime.datetime(2010, 1, 1),
+            country="ERI",
+        )
+        assert data2["gdp"].iloc[0] == 2117039512.19512
+        data11 = wbdata.get_dataframe(
+            {"NY.GDP.MKTP.CD": "gdp"},
+            source=11,
+            data_date=datetime.datetime(2010, 1, 1),
+            country="ERI",
+        )
+        assert data11["gdp"].iloc[0] == 2117008130.0813
 
 
 if __name__ == "__main__":

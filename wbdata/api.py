@@ -112,6 +112,7 @@ def get_series(
     indicator,
     country="all",
     data_date=None,
+    source=None,
     convert_date=False,
     column_name="value",
     keep_levels=False,
@@ -121,8 +122,10 @@ def get_series(
 
     :indicator: the desired indicator code
     :country: a country code, sequence of country codes, or "all" (default)
-    :date: the desired date as a datetime object or a 2-tuple with
+    :data_date: the desired date as a datetime object or a 2-tuple with
         start and end dates
+    :source: the specific source to retrieve data from (defaults on API to 2,
+        World Development Indicators)
     :convert_date: if True, convert date field to a datetime.datetime object.
     :column_name: the desired name for the pandas column
     :keep_levels: if True and pandas is True, don't reduce the number of
@@ -136,6 +139,7 @@ def get_series(
                 indicator=indicator,
                 country=country,
                 data_date=data_date,
+                source=source,
                 convert_date=convert_date,
             )
         ],
@@ -169,7 +173,7 @@ def get_data(
     :data_date: the desired date as a datetime object or a 2-tuple with
         start and end dates
     :source: the specific source to retrieve data from (defaults on API to 2,
-        World Development Indicators
+        World Development Indicators)
     :convert_date: if True, convert date field to a datetime.datetime object.
     :returns: list of dictionaries or pandas Series
     """
@@ -185,6 +189,7 @@ def get_data(
             indicator=indicator,
             country=country,
             data_date=data_date,
+            source=source,
             convert_date=convert_date,
             column_name=column_name,
             keep_levels=keep_levels,
@@ -439,6 +444,7 @@ def get_dataframe(
     indicators,
     country="all",
     data_date=None,
+    source=None,
     convert_date=False,
     keep_levels=False,
 ):
@@ -452,6 +458,8 @@ def get_dataframe(
     :country: a country code, sequence of country codes, or "all" (default)
     :data_date: the desired date as a datetime object or a 2-sequence with
         start and end dates
+    :source: the specific source to retrieve data from (defaults on API to 2,
+        World Development Indicators)
     :convert_date: if True, convert date field to a datetime.datetime object.
     :keep_levels: if True don't reduce the number of index levels returned if
         only getting one date or country
@@ -463,6 +471,7 @@ def get_dataframe(
                 indicator=i,
                 country=country,
                 data_date=data_date,
+                source=source,
                 convert_date=convert_date,
                 keep_levels=keep_levels,
             )
