@@ -124,6 +124,22 @@ class TestGetData(unittest.TestCase):
             "SP.POP.TOTL", country="usa", pandas=True, column_name="IForget"
         )
 
+    def testSource(self):
+        data2 = wbdata.get_data(
+            "NY.GDP.MKTP.CD",
+            source=2,
+            data_date=datetime.datetime(2010, 1, 1),
+            country="ERI",
+        )
+        assert data2[0]["value"] == 2117039512.19512
+        data11 = wbdata.get_data(
+            "NY.GDP.MKTP.CD",
+            source=11,
+            data_date=datetime.datetime(2010, 1, 1),
+            country="ERI",
+        )
+        assert data11[0]["value"] == 2117008130.0813
+
 
 class TestSearchFunctions(unittest.TestCase):
     def testSearchCountry(self):
