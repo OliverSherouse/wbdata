@@ -112,6 +112,7 @@ def get_series(
     indicator,
     country="all",
     data_date=None,
+    source=None,
     convert_date=False,
     column_name="value",
     keep_levels=False,
@@ -121,8 +122,10 @@ def get_series(
 
     :indicator: the desired indicator code
     :country: a country code, sequence of country codes, or "all" (default)
-    :date: the desired date as a datetime object or a 2-tuple with
+    :data_date: the desired date as a datetime object or a 2-tuple with
         start and end dates
+    :source: the specific source to retrieve data from (defaults on API to 2,
+        World Development Indicators)
     :convert_date: if True, convert date field to a datetime.datetime object.
     :column_name: the desired name for the pandas column
     :keep_levels: if True and pandas is True, don't reduce the number of
@@ -132,7 +135,13 @@ def get_series(
     df = pd.DataFrame(
         [
             [i["country"]["value"], i["date"], i["value"]]
-            for i in get_data(indicator, country, data_date, convert_date)
+            for i in get_data(
+                indicator=indicator,
+                country=country,
+                data_date=data_date,
+                source=source,
+                convert_date=convert_date,
+            )
         ],
         columns=["country", "date", column_name],
     )
@@ -150,6 +159,7 @@ def get_data(
     indicator,
     country="all",
     data_date=None,
+    source=None,
     convert_date=False,
     pandas=False,
     column_name="value",
@@ -160,8 +170,10 @@ def get_data(
 
     :indicator: the desired indicator code
     :country: a country code, sequence of country codes, or "all" (default)
-    :date: the desired date as a datetime object or a 2-tuple with
+    :data_date: the desired date as a datetime object or a 2-tuple with
         start and end dates
+    :source: the specific source to retrieve data from (defaults on API to 2,
+        World Development Indicators)
     :convert_date: if True, convert date field to a datetime.datetime object.
     :returns: list of dictionaries or pandas Series
     """
@@ -174,12 +186,13 @@ def get_data(
             PendingDeprecationWarning,
         )
         return get_series(
-            indicator,
-            country,
-            data_date,
-            convert_date,
-            column_name,
-            keep_levels,
+            indicator=indicator,
+            country=country,
+            data_date=data_date,
+            source=source,
+            convert_date=convert_date,
+            column_name=column_name,
+            keep_levels=keep_levels,
         )
     query_url = COUNTRIES_URL
     try:
@@ -194,6 +207,8 @@ def get_data(
             args["date"] = data_date_str
         else:
             args["date"] = data_date.strftime("%Y")
+    if source:
+        args["source"] = source
     data = fetcher.fetch(query_url, args)
     if convert_date:
         data = convert_dates_to_datetime(data)
@@ -429,6 +444,7 @@ def get_dataframe(
     indicators,
     country="all",
     data_date=None,
+    source=None,
     convert_date=False,
     keep_levels=False,
 ):
@@ -442,6 +458,8 @@ def get_dataframe(
     :country: a country code, sequence of country codes, or "all" (default)
     :data_date: the desired date as a datetime object or a 2-sequence with
         start and end dates
+    :source: the specific source to retrieve data from (defaults on API to 2,
+        World Development Indicators)
     :convert_date: if True, convert date field to a datetime.datetime object.
     :keep_levels: if True don't reduce the number of index levels returned if
         only getting one date or country
@@ -450,7 +468,12 @@ def get_dataframe(
     return pd.DataFrame(
         {
             j: get_series(
-                i, country, data_date, convert_date, keep_levels=keep_levels
+                indicator=i,
+                country=country,
+                data_date=data_date,
+                source=source,
+                convert_date=convert_date,
+                keep_levels=keep_levels,
             )
             for i, j in indicators.items()
         }
