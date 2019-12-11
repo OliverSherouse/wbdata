@@ -16,12 +16,6 @@ except ImportError:
 from decorator import decorator
 from . import fetcher
 
-# Detect Interactivity
-import __main__ as main
-
-INTERACTIVE = not hasattr(main, "__file__")
-del main
-
 BASE_URL = "https://api.worldbank.org/v2"
 COUNTRIES_URL = "{0}/countries".format(BASE_URL)
 ILEVEL_URL = "{0}/incomeLevels".format(BASE_URL)
@@ -30,6 +24,31 @@ LTYPE_URL = "{0}/lendingTypes".format(BASE_URL)
 SOURCES_URL = "{0}/sources".format(BASE_URL)
 TOPIC_URL = "{0}/topics".format(BASE_URL)
 INDIC_ERROR = "Cannot specify more than one of indicator, source, and topic"
+
+
+class WBSearchResult(list):
+    """
+    A list that prints out a user-friendly table when printed or returned on
+    the command line
+
+
+    Items are expected to be dict-like and have an "id" key and a "name" or
+    "value" key
+    """
+
+    def __repr__(self):
+        try:
+            return tabulate.tabulate(
+                [[o["id"], o["name"]] for o in self],
+                headers=["id", "name"],
+                tablefmt="simple",
+            )
+        except KeyError:
+            return tabulate.tabulate(
+                [[o["id"], o["value"]] for o in self],
+                headers=["id", "value"],
+                tablefmt="simple",
+            )
 
 
 @decorator
@@ -215,83 +234,66 @@ def get_data(
     return data
 
 
-def id_only_query(query_url, query_id, display):
+def id_only_query(query_url, query_id):
     """
     Retrieve information when ids are the only arguments
 
     :query_url: the base url to use for the query
-    :query_id: an id number.  None returns all sources
-    :display: if True,print ids and names instead of returning results.
-        Defaults to True if in interactive prompt, or False otherwise
-    :returns: if display is False, a dictionary describing a source
+    :query_id: an id or sequence of ids
+    :returns: WBSearchResult containing dictionary objects describing results
     """
-    if display is None:
-        display = INTERACTIVE
     if query_id:
         query_url = "/".join((query_url, parse_value_or_iterable(query_id)))
-    results = fetcher.fetch(query_url)
-    if display:
-        print_ids_and_names(results)
-    else:
-        return results
+    return WBSearchResult(fetcher.fetch(query_url))
 
 
-def get_source(source_id=None, display=None):
+def get_source(source_id=None):
     """
     Retrieve information on a source
 
     :source_id: a source id or sequence thereof.  None returns all sources
-    :display: if True,print ids and names instead of returning results.
-        Defaults to True if in interactive prompt, or False otherwise
-    :returns: if display is False, a dictionary describing a source
+    :returns: WBSearchResult containing dictionary objects describing selected
+        sources
     """
-    return id_only_query(SOURCES_URL, source_id, display)
+    return id_only_query(SOURCES_URL, source_id)
 
 
-def get_incomelevel(level_id=None, display=None):
+def get_incomelevel(level_id=None):
     """
     Retrieve information on an income level aggregate
 
     :level_id: a level id or sequence thereof.  None returns all income level
         aggregates
-    :display: if True,print ids and names instead of returning results.
-        Defaults to True if in interactive prompt, or False otherwise
-    :returns: if display is False a dictionary describing an income level
-        aggregate
+    :returns: WBSearchResult containing dictionary objects describing selected
+        income level aggregates
     """
-    return id_only_query(ILEVEL_URL, level_id, display)
+    return id_only_query(ILEVEL_URL, level_id)
 
 
-def get_topic(topic_id=None, display=None):
+def get_topic(topic_id=None):
     """
     Retrieve information on a topic
 
     :topic_id: a topic id or sequence thereof.  None returns all topics
-    :display: if True,print ids and names instead of returning results.
-        Defaults to True if in interactive prompt, or False otherwise
-    :returns: if display is False, a dictionary describing an income level
-        aggregate
+    :returns: WBSearchResult containing dictionary objects describing selected
+        topic aggregates
     """
-    return id_only_query(TOPIC_URL, topic_id, display)
+    return id_only_query(TOPIC_URL, topic_id)
 
 
-def get_lendingtype(type_id=None, display=None):
+def get_lendingtype(type_id=None):
     """
     Retrieve information on an income level aggregate
 
     :level_id: lending type id or sequence thereof.  None returns all lending
         type aggregates
-    :display: if True,print ids and names instead of returning
-        results. Defaults to True if in interactive prompt, or False otherwise
-    :returns: if display is False, a dictionary describing an lending type
-        aggregate
+    :returns: WBSearchResult containing dictionary objects describing selected
+        topic aggregates
     """
-    return id_only_query(LTYPE_URL, type_id, display)
+    return id_only_query(LTYPE_URL, type_id)
 
 
-def get_country(
-    country_id=None, incomelevel=None, lendingtype=None, display=None
-):
+def get_country(country_id=None, incomelevel=None, lendingtype=None):
     """
     Retrieve information on a country or regional aggregate.  Can specify
     either country_id, or the aggregates, but not both
@@ -300,30 +302,22 @@ def get_country(
         and aggregates.
     :incomelevel: desired incomelevel id or ids.
     :lendingtype: desired lendingtype id or ids.
-    :display: if True,print ids and names instead of returning results.
-        Defaults to True if in interactive prompt, or False otherwise.
-    :returns: if display is False, a dictionary describing an lending type
-        aggregate.
+    :returns: WBSearchResult containing dictionary objects representing each
+        country
     """
-    if display is None:
-        display = INTERACTIVE
     if country_id:
         if incomelevel or lendingtype:
             raise ValueError("Can't specify country_id and aggregates")
-        return id_only_query(COUNTRIES_URL, country_id, display)
+        return id_only_query(COUNTRIES_URL, country_id)
     args = {}
     if incomelevel:
         args["incomeLevel"] = parse_value_or_iterable(incomelevel)
     if lendingtype:
         args["lendingType"] = parse_value_or_iterable(lendingtype)
-    results = fetcher.fetch(COUNTRIES_URL, args)
-    if display:
-        print_ids_and_names(results)
-    else:
-        return results
+    return WBSearchResult(fetcher.fetch(COUNTRIES_URL, args))
 
 
-def get_indicator(indicator=None, source=None, topic=None, display=None):
+def get_indicator(indicator=None, source=None, topic=None):
     """
     Retrieve information about an indicator or indicators.  Only one of
     indicator, source, and topic can be specified.  Specifying none of the
@@ -332,13 +326,9 @@ def get_indicator(indicator=None, source=None, topic=None, display=None):
     :indicator: an indicator code or sequence thereof
     :source: a source id or sequence thereof
     :topic: a topic id or sequence thereof
-    :display: if True,print ids and names instead of returning results.
-        Defaults to True if in interactive prompt, or False otherwise
-    :returns: if display is False, a list of dictionary objects representing
+    :returns: WBSearchResult containing dictionary objects representing
         indicators
     """
-    if display is None:
-        display = INTERACTIVE
     if indicator:
         if source or topic:
             raise ValueError(INDIC_ERROR)
@@ -357,14 +347,10 @@ def get_indicator(indicator=None, source=None, topic=None, display=None):
         )
     else:
         query_url = INDICATOR_URL
-    results = fetcher.fetch(query_url)
-    if display:
-        print_ids_and_names(results)
-    else:
-        return results
+    return WBSearchResult(fetcher.fetch(query_url))
 
 
-def search_indicators(query, source=None, topic=None, display=None):
+def search_indicators(query, source=None, topic=None):
     """
     Search indicators for a certain regular expression.  Only one of source or
     topic can be specified. In interactive mode, will return None and print
@@ -373,70 +359,27 @@ def search_indicators(query, source=None, topic=None, display=None):
     :query: the term to match against indicator names
     :source: if present, id of desired source
     :topic: if present, id of desired topic
-    :display: if True,print ids and names instead of returning results.
-        Defaults to True if in interactive prompt, or False otherwise
-    :returns: a list of dictionaries representing indicators if display is
-        False
+    :returns: WBSearchResult containing dictionary objects representing search
+        indicators
     """
-    if display is None:
-        display = INTERACTIVE
-    indicators = get_indicator(source=source, topic=topic, display=False)
+    indicators = get_indicator(source=source, topic=topic)
     pattern = re.compile(query, re.IGNORECASE)
-    matched = [i for i in indicators if pattern.search(i["name"].lower())]
-    if display:
-        print_ids_and_names(matched)
-    else:
-        return matched
+    return WBSearchResult(i for i in indicators if pattern.search(i["name"]))
 
 
-def search_countries(query, incomelevel=None, lendingtype=None, display=None):
+def search_countries(query, incomelevel=None, lendingtype=None):
     """
     Search countries by name.  Very simple search.
 
     :query: the string to match against country names
     :incomelevel: if present, search only the matching incomelevel
     :lendingtype: if present, search only the matching lendingtype
-    :display: if True,print ids and names instead of returning results.
-        Defaults to True if in interactive prompt, or False otherwise
-    :returns: a list of dictionaries representing countries if display is
-        False
+    :returns: WBSearchResult containing dictionary objects representing
+        countries
     """
-    if display is None:
-        display = INTERACTIVE
-    countries = get_country(
-        incomelevel=incomelevel, lendingtype=lendingtype, display=False
-    )
+    countries = get_country(incomelevel=incomelevel, lendingtype=lendingtype)
     pattern = re.compile(query, re.IGNORECASE)
-    matched = [i for i in countries if pattern.search(i["name"].lower())]
-    if display:
-        print_ids_and_names(matched)
-    else:
-        return matched
-
-
-def print_ids_and_names(objs):
-    """
-    Courtesy function to display ids and names from lists returned by wbdata.
-    This will mostly be useful in interactive mode.
-
-    :objs: a list of dictionary objects as returned by wbdata
-    """
-    try:
-        print(
-            tabulate.tabulate(
-                [[o["id"], o["name"]] for o in objs],
-                headers=["id", "name"],
-                tablefmt="simple",
-            )
-        )
-    except KeyError:
-        print(
-            tabulate.tabulate(
-                [[o["id"], o["value"]] for o in objs],
-                headers=["id", "value"],
-                tablefmt="simple",
-            )
-        )
+    return WBSearchResult(i for i in countries if pattern.search(i["name"]))
 
 
 @uses_pandas
