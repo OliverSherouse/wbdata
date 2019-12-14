@@ -140,6 +140,10 @@ class TestGetData(unittest.TestCase):
         )
         assert data11[0]["value"] == 2117008130.0813
 
+    def testLastUpdated(self):
+        data = wbdata.get_data("SP.POP.TOTL", country="USA")
+        assert isinstance(data.last_updated, datetime.datetime)
+
 
 class TestSearchFunctions(unittest.TestCase):
     def testSearchCountry(self):
@@ -208,6 +212,10 @@ class TestGetSeries(unittest.TestCase):
         series = wbdata.get_series(self.indicator, column_name="foo")
         assert series.name == "foo"
 
+    def testLastUpdated(self):
+        series = wbdata.get_series(self.indicator)
+        assert isinstance(series.last_updated, datetime.datetime)
+
 
 class TestGetDataframe(unittest.TestCase):
     def setUp(self):
@@ -253,6 +261,15 @@ class TestGetDataframe(unittest.TestCase):
             country="ERI",
         )
         assert data11["gdp"].iloc[0] == 2117008130.0813
+
+    def testLastUpdated(self):
+        df = wbdata.get_dataframe(self.indicators)
+        assert isinstance(df.last_updated, dict)
+        assert sorted(df.columns) == sorted(df.last_updated.keys())
+        assert all(
+            isinstance(date, datetime.datetime)
+            for date in df.last_updated.values()
+        )
 
 
 if __name__ == "__main__":

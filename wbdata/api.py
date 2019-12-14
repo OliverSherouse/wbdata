@@ -51,6 +51,30 @@ class WBSearchResult(list):
             )
 
 
+class WBSeries(pd.Series):
+    """
+    A pandas Series with a last_updated attribute
+    """
+
+    _metadata = ["last_updated"]
+
+    @property
+    def _constructor(self):
+        return WBSeries
+
+
+class WBDataFrame(pd.DataFrame):
+    """
+    A pandas DataFrame with a last_updated attribute
+    """
+
+    _metadata = ["last_updated"]
+
+    @property
+    def _constructor(self):
+        return WBDataFrame
+
+
 @decorator
 def uses_pandas(f, *args, **kwargs):
     """Raise ValueError if pandas is not loaded"""
@@ -149,19 +173,17 @@ def get_series(
     :column_name: the desired name for the pandas column
     :keep_levels: if True and pandas is True, don't reduce the number of
         index levels returned if only getting one date or country
-    :returns: pandas Series
+    :returns: WBSeries
     """
+    raw_data = get_data(
+        indicator=indicator,
+        country=country,
+        data_date=data_date,
+        source=source,
+        convert_date=convert_date,
+    )
     df = pd.DataFrame(
-        [
-            [i["country"]["value"], i["date"], i["value"]]
-            for i in get_data(
-                indicator=indicator,
-                country=country,
-                data_date=data_date,
-                source=source,
-                convert_date=convert_date,
-            )
-        ],
+        [[i["country"]["value"], i["date"], i["value"]] for i in raw_data],
         columns=["country", "date", column_name],
     )
     df[column_name] = df[column_name].map(cast_float)
@@ -171,7 +193,9 @@ def get_series(
         df = df.set_index("country")
     else:
         df = df.set_index(["country", "date"])
-    return df[column_name]
+    series = WBSeries(df[column_name])
+    series.last_updated = raw_data.last_updated
+    return series
 
 
 def get_data(
@@ -408,16 +432,26 @@ def get_dataframe(
         only getting one date or country
     :returns: a pandas DataFrame
     """
-    return pd.DataFrame(
-        {
-            j: get_series(
-                indicator=i,
+    serieses = [
+        (
+            get_series(
+                indicator=indicator,
                 country=country,
                 data_date=data_date,
                 source=source,
                 convert_date=convert_date,
                 keep_levels=keep_levels,
-            )
-            for i, j in indicators.items()
-        }
-    )
+            ).rename(name)
+        )
+        for indicator, name in indicators.items()
+    ]
+    print(type(serieses[0]))
+    result = None
+    for series in serieses:
+        if result is None:
+            result = series.to_frame()
+        else:
+            result = result.join(series, how="outer")
+    result = WBDataFrame(result)
+    result.last_updated = {i.name: i.last_updated for i in serieses}
+    return result

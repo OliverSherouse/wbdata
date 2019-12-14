@@ -2,12 +2,12 @@
 wbdata.fetcher: retrieve and cache queries
 """
 
-import logging
+import datetime
 import json
+import logging
 import os
 import pickle
 import sys
-import datetime
 
 import requests
 
@@ -15,6 +15,12 @@ EXP = 7
 PER_PAGE = 1000
 TODAY = datetime.date.today()
 TRIES = 5
+
+
+class WBResults(list):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.last_updated = None
 
 
 class Cache(object):
@@ -153,4 +159,11 @@ def fetch(url, args=None, cached=True):
     for i in results:
         if "id" in i:
             i["id"] = i["id"].strip()
+    results = WBResults(results)
+    try:
+        results.last_updated = datetime.datetime.strptime(
+            response[0]["lastupdated"], "%Y-%m-%d"
+        )
+    except KeyError:
+        pass
     return results
