@@ -159,6 +159,7 @@ def get_series(
     convert_date=False,
     column_name="value",
     keep_levels=False,
+    cache=True,
 ):
     """
     Retrieve indicators for given countries and years
@@ -173,6 +174,7 @@ def get_series(
     :column_name: the desired name for the pandas column
     :keep_levels: if True and pandas is True, don't reduce the number of
         index levels returned if only getting one date or country
+    :cache: use the cache
     :returns: WBSeries
     """
     raw_data = get_data(
@@ -181,6 +183,7 @@ def get_series(
         data_date=data_date,
         source=source,
         convert_date=convert_date,
+        cache=cache,
     )
     df = pd.DataFrame(
         [[i["country"]["value"], i["date"], i["value"]] for i in raw_data],
@@ -207,6 +210,7 @@ def get_data(
     pandas=False,
     column_name="value",
     keep_levels=False,
+    cache=True,
 ):
     """
     Retrieve indicators for given countries and years
@@ -218,6 +222,7 @@ def get_data(
     :source: the specific source to retrieve data from (defaults on API to 2,
         World Development Indicators)
     :convert_date: if True, convert date field to a datetime.datetime object.
+    :cache: use the cache
     :returns: list of dictionaries or pandas Series
     """
     if pandas:
@@ -236,6 +241,7 @@ def get_data(
             convert_date=convert_date,
             column_name=column_name,
             keep_levels=keep_levels,
+            cache=cache,
         )
     query_url = COUNTRIES_URL
     try:
@@ -252,18 +258,19 @@ def get_data(
             args["date"] = data_date.strftime("%Y")
     if source:
         args["source"] = source
-    data = fetcher.fetch(query_url, args)
+    data = fetcher.fetch(query_url, args, cache=cache)
     if convert_date:
         data = convert_dates_to_datetime(data)
     return data
 
 
-def id_only_query(query_url, query_id):
+def id_only_query(query_url, query_id, cache):
     """
     Retrieve information when ids are the only arguments
 
     :query_url: the base url to use for the query
     :query_id: an id or sequence of ids
+    :cache: use the cache
     :returns: WBSearchResult containing dictionary objects describing results
     """
     if query_id:
@@ -271,53 +278,59 @@ def id_only_query(query_url, query_id):
     return WBSearchResult(fetcher.fetch(query_url))
 
 
-def get_source(source_id=None):
+def get_source(source_id=None, cache=True):
     """
     Retrieve information on a source
 
     :source_id: a source id or sequence thereof.  None returns all sources
+    :cache: use the cache
     :returns: WBSearchResult containing dictionary objects describing selected
         sources
     """
-    return id_only_query(SOURCES_URL, source_id)
+    return id_only_query(SOURCES_URL, source_id, cache=cache)
 
 
-def get_incomelevel(level_id=None):
+def get_incomelevel(level_id=None, cache=True):
     """
     Retrieve information on an income level aggregate
 
     :level_id: a level id or sequence thereof.  None returns all income level
         aggregates
+    :cache: use the cache
     :returns: WBSearchResult containing dictionary objects describing selected
         income level aggregates
     """
-    return id_only_query(ILEVEL_URL, level_id)
+    return id_only_query(ILEVEL_URL, level_id, cache=cache)
 
 
-def get_topic(topic_id=None):
+def get_topic(topic_id=None, cache=True):
     """
     Retrieve information on a topic
 
     :topic_id: a topic id or sequence thereof.  None returns all topics
+    :cache: use the cache
     :returns: WBSearchResult containing dictionary objects describing selected
         topic aggregates
     """
-    return id_only_query(TOPIC_URL, topic_id)
+    return id_only_query(TOPIC_URL, topic_id, cache=cache)
 
 
-def get_lendingtype(type_id=None):
+def get_lendingtype(type_id=None, cache=True):
     """
     Retrieve information on an income level aggregate
 
     :level_id: lending type id or sequence thereof.  None returns all lending
         type aggregates
+    :cache: use the cache
     :returns: WBSearchResult containing dictionary objects describing selected
         topic aggregates
     """
-    return id_only_query(LTYPE_URL, type_id)
+    return id_only_query(LTYPE_URL, type_id, cache=cache)
 
 
-def get_country(country_id=None, incomelevel=None, lendingtype=None):
+def get_country(
+    country_id=None, incomelevel=None, lendingtype=None, cache=True
+):
     """
     Retrieve information on a country or regional aggregate.  Can specify
     either country_id, or the aggregates, but not both
@@ -326,22 +339,23 @@ def get_country(country_id=None, incomelevel=None, lendingtype=None):
         and aggregates.
     :incomelevel: desired incomelevel id or ids.
     :lendingtype: desired lendingtype id or ids.
+    :cache: use the cache
     :returns: WBSearchResult containing dictionary objects representing each
         country
     """
     if country_id:
         if incomelevel or lendingtype:
             raise ValueError("Can't specify country_id and aggregates")
-        return id_only_query(COUNTRIES_URL, country_id)
+        return id_only_query(COUNTRIES_URL, country_id, cache=cache)
     args = {}
     if incomelevel:
         args["incomeLevel"] = parse_value_or_iterable(incomelevel)
     if lendingtype:
         args["lendingType"] = parse_value_or_iterable(lendingtype)
-    return WBSearchResult(fetcher.fetch(COUNTRIES_URL, args))
+    return WBSearchResult(fetcher.fetch(COUNTRIES_URL, args, cache=cache))
 
 
-def get_indicator(indicator=None, source=None, topic=None):
+def get_indicator(indicator=None, source=None, topic=None, cache=True):
     """
     Retrieve information about an indicator or indicators.  Only one of
     indicator, source, and topic can be specified.  Specifying none of the
@@ -350,6 +364,7 @@ def get_indicator(indicator=None, source=None, topic=None):
     :indicator: an indicator code or sequence thereof
     :source: a source id or sequence thereof
     :topic: a topic id or sequence thereof
+    :cache: use the cache
     :returns: WBSearchResult containing dictionary objects representing
         indicators
     """
@@ -371,10 +386,10 @@ def get_indicator(indicator=None, source=None, topic=None):
         )
     else:
         query_url = INDICATOR_URL
-    return WBSearchResult(fetcher.fetch(query_url))
+    return WBSearchResult(fetcher.fetch(query_url, cache=cache))
 
 
-def search_indicators(query, source=None, topic=None):
+def search_indicators(query, source=None, topic=None, cache=True):
     """
     Search indicators for a certain regular expression.  Only one of source or
     topic can be specified. In interactive mode, will return None and print
@@ -383,25 +398,29 @@ def search_indicators(query, source=None, topic=None):
     :query: the term to match against indicator names
     :source: if present, id of desired source
     :topic: if present, id of desired topic
+    :cache: use the cache
     :returns: WBSearchResult containing dictionary objects representing search
         indicators
     """
-    indicators = get_indicator(source=source, topic=topic)
+    indicators = get_indicator(source=source, topic=topic, cache=cache)
     pattern = re.compile(query, re.IGNORECASE)
     return WBSearchResult(i for i in indicators if pattern.search(i["name"]))
 
 
-def search_countries(query, incomelevel=None, lendingtype=None):
+def search_countries(query, incomelevel=None, lendingtype=None, cache=True):
     """
     Search countries by name.  Very simple search.
 
     :query: the string to match against country names
     :incomelevel: if present, search only the matching incomelevel
     :lendingtype: if present, search only the matching lendingtype
+    :cache: use the cache
     :returns: WBSearchResult containing dictionary objects representing
         countries
     """
-    countries = get_country(incomelevel=incomelevel, lendingtype=lendingtype)
+    countries = get_country(
+        incomelevel=incomelevel, lendingtype=lendingtype, cache=cache
+    )
     pattern = re.compile(query, re.IGNORECASE)
     return WBSearchResult(i for i in countries if pattern.search(i["name"]))
 
@@ -414,6 +433,7 @@ def get_dataframe(
     source=None,
     convert_date=False,
     keep_levels=False,
+    cache=True,
 ):
     """
     Convenience function to download a set of indicators and  merge them into a
@@ -430,6 +450,7 @@ def get_dataframe(
     :convert_date: if True, convert date field to a datetime.datetime object.
     :keep_levels: if True don't reduce the number of index levels returned if
         only getting one date or country
+    :cache: use the cache
     :returns: a pandas DataFrame
     """
     serieses = [
@@ -441,6 +462,7 @@ def get_dataframe(
                 source=source,
                 convert_date=convert_date,
                 keep_levels=keep_levels,
+                cache=cache,
             ).rename(name)
         )
         for indicator, name in indicators.items()

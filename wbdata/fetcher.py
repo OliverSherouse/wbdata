@@ -106,33 +106,33 @@ def get_json_from_url(url, args):
     raise RuntimeError("Couldn't connect to API")
 
 
-def get_response(url, args, cached=True):
+def get_response(url, args, cache=True):
     """
     Get single page response from World Bank API or from cache
     : query_url: the base url to be queried
     : args: a dictionary of GET arguments
-    : cached: use the cache
+    : cache: use the cache
     : returns: a dictionary with the response from the API
     """
     logging.debug("fetching {}".format(url))
     key = (url, tuple(sorted(args.items())))
-    if cached and key in CACHE:
+    if cache and key in CACHE:
         response = CACHE[key]
     else:
         response = get_json_from_url(url, args)
-        if cached:
+        if cache:
             CACHE[key] = response
     return json.loads(response)
 
 
-def fetch(url, args=None, cached=True):
+def fetch(url, args=None, cache=True):
     """Fetch data from the World Bank API or from cache.
 
     Given the base url, keep fetching results until there are no more pages.
 
     : query_url: the base url to be queried
     : args: a dictionary of GET arguments
-    : cached: use the cache
+    : cache: use the cache
     : returns: a list of dictionaries containing the response to the query
     """
     if args is None:
@@ -144,7 +144,7 @@ def fetch(url, args=None, cached=True):
     results = []
     pages, this_page = 0, 1
     while pages != this_page:
-        response = get_response(url, args, cached=cached)
+        response = get_response(url, args, cache=cache)
         if response[1] is None:
             logging.debug(response)
             raise RuntimeError(
