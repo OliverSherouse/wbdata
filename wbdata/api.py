@@ -53,7 +53,7 @@ class WBSearchResult(list):
 
 class WBSeries(pd.Series):
     """
-    A pandas Series with a last_updated property
+    A pandas Series with a last_updated attribute
     """
 
     _metadata = ["last_updated"]
@@ -65,7 +65,7 @@ class WBSeries(pd.Series):
 
 class WBDataFrame(pd.DataFrame):
     """
-    A pandas Series with a last_updated property
+    A pandas DataFrame with a last_updated attribute
     """
 
     _metadata = ["last_updated"]
