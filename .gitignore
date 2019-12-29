@@ -1,6 +1,7 @@
 MANIFEST
 poetry.lock
 pip-wheel-metadata/
+yo.yaml
 
 *.py[cod]
 .cache
