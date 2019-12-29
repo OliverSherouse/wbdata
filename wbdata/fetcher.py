@@ -35,6 +35,7 @@ class Cache(object):
                 appname="wbdata", version=wbdata.__version__
             )
         )
+        self.path.parent.mkdir(parents=True, exist_ok=True)
         try:
             with self.path.open("rb") as cachefile:
                 self.cache = {
