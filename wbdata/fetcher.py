@@ -5,11 +5,14 @@ wbdata.fetcher: retrieve and cache queries
 import datetime
 import json
 import logging
-import os
 import pickle
-import sys
 
+import appdirs
 import requests
+
+import wbdata
+
+from pathlib import Path
 
 EXP = 7
 PER_PAGE = 1000
@@ -27,48 +30,20 @@ class Cache(object):
     """Docstring for Cache """
 
     def __init__(self):
-        self.__path = None
-        self.__cache = None
-
-    @property
-    def path(self):
-        if self.__path is None:
-            # Inspiration for below from Trent Mick and Sridhar Ratnakumar
-            # <http://pypi.python.org/pypi/appdirs/1.2.0>
-            if sys.platform.startswith("win"):
-                basedir = os.path.join(
-                    os.getenv(
-                        "LOCALAPPDATA",
-                        os.getenv("APPDATA", os.path.expanduser("~")),
-                    ),
-                    "wbdata",
-                )
-            elif sys.platform == "darwin":
-                basedir = os.path.expanduser("~/Library/Caches")
-            else:
-                basedir = os.getenv(
-                    "XDG_CACHE_HOME", os.path.expanduser("~/.cache")
-                )
-            cachedir = os.path.join(basedir, "wbdata")
-            if not os.path.exists(cachedir):
-                os.makedirs(cachedir)
-            self.__path = os.path.join(cachedir, "cache")
-        return self.__path
-
-    @property
-    def cache(self):
-        if self.__cache is None:
-            try:
-                with open(self.path, "rb") as cachefile:
-                    cache = {
-                        i: (date, json)
-                        for i, (date, json) in pickle.load(cachefile).items()
-                        if (TODAY - datetime.date.fromordinal(date)).days < EXP
-                    }
-            except (IOError, EOFError):
-                cache = {}
-            self.__cache = cache
-        return self.__cache
+        self.path = Path(
+            appdirs.user_cache_dir(
+                appname="wbdata", version=wbdata.__version__
+            )
+        )
+        try:
+            with self.path.open("rb") as cachefile:
+                self.cache = {
+                    i: (date, json)
+                    for i, (date, json) in pickle.load(cachefile).items()
+                    if (TODAY - datetime.date.fromordinal(date)).days < EXP
+                }
+        except (IOError, EOFError):
+            self.cache = {}
 
     def __getitem__(self, key):
         return self.cache[key][1]
@@ -82,7 +57,7 @@ class Cache(object):
 
     def sync(self):
         """Sync cache to disk"""
-        with open(self.path, "wb") as cachefile:
+        with self.path.open("wb") as cachefile:
             pickle.dump(self.cache, cachefile)
 
 

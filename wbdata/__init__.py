@@ -1,6 +1,7 @@
 """
 wbdata: A wrapper for the World Bank API
 """
+__version__ = "0.3.0-dev"
 
 from .api import (
     get_country,
@@ -15,5 +16,3 @@ from .api import (
     search_countries,
     search_indicators,
 )
-
-__version__ = "0.3.0-dev"

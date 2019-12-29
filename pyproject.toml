@@ -19,6 +19,7 @@ requests = ">=2.0"
 pandas = {version = ">=0.17", optional=true}
 sphinx = {version = ">=2.2", optional=true}
 tabulate = ">=0.8.5"
+appdirs = "^1.4"
 
 [tool.poetry.extras]
 pandas = ["pandas"]
