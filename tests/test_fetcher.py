@@ -11,5 +11,5 @@ def test_bad_indicator_error():
     )
     with pytest.raises(RuntimeError, match=expected):
         wbdata.fetcher.fetch(
-            f"{wbdata.api.COUNTRIES_URL}/all/AINT.NOT.A.THING"
+            wbdata.api.COUNTRIES_URL + "/all/AINT.NOT.A.THING"
         )
