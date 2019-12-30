@@ -130,8 +130,7 @@ def fetch(url, args=None, cache=True):
             try:
                 message = response[0]["message"][0]
                 raise RuntimeError(
-                    f'Got error {message["id"]} ({message["key"]}): '
-                    f'{message["value"]}'
+                    "Got error {id} ({key}): {value}".format(**message)
                 )
             except (IndexError, KeyError):
                 raise RuntimeError(
