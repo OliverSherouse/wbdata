@@ -134,7 +134,9 @@ def fetch(url, args=None, cache=True):
                 )
             except (IndexError, KeyError):
                 raise RuntimeError(
-                    f"Got unexpected response:\n{pprint.pformat(response)}"
+                    "Got unexpected response:\n{}".format(
+                        pprint.pformat(response)
+                    )
                 )
         logging.debug("Processed page {0} of {1}".format(this_page, pages))
         args["page"] = int(this_page) + 1
