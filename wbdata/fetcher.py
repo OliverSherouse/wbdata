@@ -6,6 +6,7 @@ import datetime
 import json
 import logging
 import pickle
+import pprint
 
 import appdirs
 import requests
@@ -121,15 +122,21 @@ def fetch(url, args=None, cache=True):
     pages, this_page = 0, 1
     while pages != this_page:
         response = get_response(url, args, cache=cache)
-        if response[1] is None:
-            logging.debug(response)
-            raise RuntimeError(
-                "Received no Data from API. This indicator may be invalid or "
-                "no longer available"
-            )
-        results.extend(response[1])
-        this_page = response[0]["page"]
-        pages = response[0]["pages"]
+        try:
+            results.extend(response[1])
+            this_page = response[0]["page"]
+            pages = response[0]["pages"]
+        except (IndexError, KeyError):
+            try:
+                message = response[0]["message"][0]
+                raise RuntimeError(
+                    f'Got error {message["id"]} ({message["key"]}): '
+                    f'{message["value"]}'
+                )
+            except (IndexError, KeyError):
+                raise RuntimeError(
+                    f"Got unexpected response:\n{pprint.pformat(response)}"
+                )
         logging.debug("Processed page {0} of {1}".format(this_page, pages))
         args["page"] = int(this_page) + 1
     for i in results:
