@@ -79,7 +79,7 @@ def get_json_from_url(url, args):
             return requests.get(url, args).text
         except requests.ConnectionError:
             continue
-    logging.error("Error connecting to {url}".format(url=url))
+    logging.error(f"Error connecting to {url}")
     raise RuntimeError("Couldn't connect to API")
 
 
@@ -91,7 +91,7 @@ def get_response(url, args, cache=True):
     : cache: use the cache
     : returns: a dictionary with the response from the API
     """
-    logging.debug("fetching {}".format(url))
+    logging.debug(f"fetching {url}")
     key = (url, tuple(sorted(args.items())))
     if cache and key in CACHE:
         response = CACHE[key]
@@ -130,15 +130,14 @@ def fetch(url, args=None, cache=True):
             try:
                 message = response[0]["message"][0]
                 raise RuntimeError(
-                    "Got error {id} ({key}): {value}".format(**message)
+                    f"Got error {message['id']} ({message['key']}): "
+                    f"{message['value']}"
                 )
             except (IndexError, KeyError):
                 raise RuntimeError(
-                    "Got unexpected response:\n{}".format(
-                        pprint.pformat(response)
-                    )
+                    f"Got unexpected response:\n{pprint.pformat(response)}"
                 )
-        logging.debug("Processed page {0} of {1}".format(this_page, pages))
+        logging.debug(f"Processed page {this_page} of {pages}")
         args["page"] = int(this_page) + 1
     for i in results:
         if "id" in i:
