@@ -17,12 +17,12 @@ from decorator import decorator
 from . import fetcher
 
 BASE_URL = "https://api.worldbank.org/v2"
-COUNTRIES_URL = "{0}/countries".format(BASE_URL)
-ILEVEL_URL = "{0}/incomeLevels".format(BASE_URL)
-INDICATOR_URL = "{0}/indicators".format(BASE_URL)
-LTYPE_URL = "{0}/lendingTypes".format(BASE_URL)
-SOURCES_URL = "{0}/sources".format(BASE_URL)
-TOPIC_URL = "{0}/topics".format(BASE_URL)
+COUNTRIES_URL = f"{BASE_URL}/countries"
+ILEVEL_URL = f"{BASE_URL}/incomeLevels"
+INDICATOR_URL = f"{BASE_URL}/indicators"
+LTYPE_URL = f"{BASE_URL}/lendingTypes"
+SOURCES_URL = f"{BASE_URL}/sources"
+TOPIC_URL = f"{BASE_URL}/topics"
 INDIC_ERROR = "Cannot specify more than one of indicator, source, and topic"
 
 
