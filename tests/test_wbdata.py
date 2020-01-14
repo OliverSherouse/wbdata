@@ -1,22 +1,12 @@
 #!/usr/bin/env python3
 
 import datetime
-import unittest
-import os.path
-import sys
 
-sys.path.append(
-    os.path.normpath(
-        os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
-    )
-)
-
-print(sys.path[-1])
-
-import wbdata  # noqa
+import pytest
+import wbdata
 
 
-class TestSimpleQueries(unittest.TestCase):
+class TestSimpleQueries:
     def testGetAllIncomeLevels(self):
         wbdata.get_incomelevel()
 
@@ -42,7 +32,7 @@ class TestSimpleQueries(unittest.TestCase):
         wbdata.get_source("3")
 
 
-class TestGetCountry(unittest.TestCase):
+class TestGetCountry:
     def testAllCountries(self):
         wbdata.get_country()
 
@@ -55,20 +45,20 @@ class TestGetCountry(unittest.TestCase):
     def testIDB(self):
         wbdata.get_country(lendingtype="IDB")
 
-    @unittest.expectedFailure
     def testBadCountry(self):
-        wbdata.get_country(country_id="Foobar")
+        with pytest.raises(RuntimeError):
+            wbdata.get_country(country_id="Foobar")
 
-    @unittest.expectedFailure
     def testBadIncomeLevel(self):
-        wbdata.get_country(incomelevel="Foobar")
+        with pytest.raises(RuntimeError):
+            wbdata.get_country(incomelevel="Foobar")
 
-    @unittest.expectedFailure
     def testBadLendingType(self):
-        wbdata.get_country(incomelevel="Foobar")
+        with pytest.raises(RuntimeError):
+            wbdata.get_country(incomelevel="Foobar")
 
 
-class TestGetIndicator(unittest.TestCase):
+class TestGetIndicator:
     def testGetAllIndicators(self):
         wbdata.get_indicator()
 
@@ -81,12 +71,12 @@ class TestGetIndicator(unittest.TestCase):
     def testGetIndicatorByTopic(self):
         wbdata.get_indicator(topic="1")
 
-    @unittest.expectedFailure
     def testGetIndicatorBySourceAndTopic(self):
-        wbdata.get_indicator(source="1", topic=1)
+        with pytest.raises(ValueError):
+            wbdata.get_indicator(source="1", topic=1)
 
 
-class TestGetData(unittest.TestCase):
+class TestGetData:
     def testIndicator(self):
         wbdata.get_data("SP.POP.TOTL")
 
@@ -145,7 +135,7 @@ class TestGetData(unittest.TestCase):
         assert isinstance(data.last_updated, datetime.datetime)
 
 
-class TestSearchFunctions(unittest.TestCase):
+class TestSearchFunctions:
     def testSearchCountry(self):
         wbdata.search_countries("United")
 
@@ -153,9 +143,8 @@ class TestSearchFunctions(unittest.TestCase):
         wbdata.search_indicators("gdp")
 
 
-class TestGetSeries(unittest.TestCase):
-    def setUp(self):
-        self.indicator = "NY.GDP.MKTP.PP.KD"
+class TestGetSeries:
+    indicator = "NY.GDP.MKTP.PP.KD"
 
     def testOneCountry(self):
         country = "USA"
@@ -217,12 +206,11 @@ class TestGetSeries(unittest.TestCase):
         assert isinstance(series.last_updated, datetime.datetime)
 
 
-class TestGetDataframe(unittest.TestCase):
-    def setUp(self):
-        self.indicators = {
-            "NY.GDP.MKTP.PP.KD": "gdp",
-            "NY.GDP.PCAP.PP.KD": "gdppc",
-        }
+class TestGetDataframe:
+    indicators = {
+        "NY.GDP.MKTP.PP.KD": "gdp",
+        "NY.GDP.PCAP.PP.KD": "gdppc",
+    }
 
     def testCountries(self):
         countries = ("USA", "GBR")
@@ -270,7 +258,3 @@ class TestGetDataframe(unittest.TestCase):
             isinstance(date, datetime.datetime)
             for date in df.last_updated.values()
         )
-
-
-if __name__ == "__main__":
-    unittest.main()
