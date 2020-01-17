@@ -1,117 +1,35 @@
 #!/usr/bin/env python3
 
+import collections
 import datetime
 
 import pytest
 import wbdata as wbd
 
 
-@pytest.fixture
-def incomelevels():
-    return wbd.get_incomelevel()
+SimpleCallDefinition = collections.namedtuple(
+    "SimpleCallDefinition", ["function", "valid_id", "value"]
+)
 
+SimpleCallData = collections.namedtuple(
+    "SimpleCallData", ["function", "result_all", "result_one", "id", "value"]
+)
 
-@pytest.fixture
-def one_incomelevel():
-    return wbd.get_incomelevel("HIC")
-
-
-@pytest.fixture
-def lendingtypes():
-    return wbd.get_lendingtype()
-
-
-@pytest.fixture
-def one_lendingtype():
-    return wbd.get_lendingtype("IBD")
-
-
-@pytest.fixture
-def sources():
-    return wbd.get_source()
-
-
-@pytest.fixture
-def one_source():
-    return wbd.get_source(2)
-
-
-@pytest.fixture
-def topics():
-    return wbd.get_topic()
-
-
-@pytest.fixture
-def one_topic():
-    return wbd.get_topic(3)
-
-
-class TestSimpleQueries:
-    """
-    Test that results of simple queries are close to what we expect
-    """
-
-    def test_incomelevels_type(self, incomelevels):
-        assert isinstance(incomelevels, wbd.api.WBSearchResult)
-
-    def test_incomelevels_len(self, incomelevels):
-        assert len(incomelevels) > 1
-
-    def test_incomelevels_content(self, incomelevels):
-        assert any(i["id"] == "HIC" for i in incomelevels)
-
-    def test_one_incomelevel_type(self, one_incomelevel):
-        assert isinstance(one_incomelevel, wbd.api.WBSearchResult)
-
-    def test_one_incomelevel_len(self, one_incomelevel):
-        assert len(one_incomelevel) == 1
-
-    def test_one_incomelevel_content(self, one_incomelevel):
-        assert one_incomelevel[0] == {
-            "id": "HIC",
-            "iso2code": "XD",
-            "value": "High income",
-        }
-
-    def test_lendingtypes_type(self, lendingtypes):
-        assert isinstance(lendingtypes, wbd.api.WBSearchResult)
-
-    def test_lendingtypes_len(self, lendingtypes):
-        assert len(lendingtypes) > 1
-
-    def test_lendingtypes_content(self, lendingtypes):
-        assert any(i["id"] == "IBD" for i in lendingtypes)
-
-    def test_one_lendingtype_type(self, one_lendingtype):
-        assert isinstance(one_lendingtype, wbd.api.WBSearchResult)
-
-    def test_one_lendingtype_len(self, one_lendingtype):
-        assert len(one_lendingtype) == 1
-
-    def test_one_lendingtype_content(self, one_lendingtype):
-        assert one_lendingtype[0] == {
-            "id": "IBD",
-            "iso2code": "XF",
-            "value": "IBRD",
-        }
-
-    def test_sources_type(self, sources):
-        assert isinstance(sources, wbd.api.WBSearchResult)
-
-    def test_sources_len(self, sources):
-        assert len(sources) > 1
-
-    def test_sources_content(self, sources):
-        assert any(i["id"] == "2" for i in sources)
-
-    def test_one_source_type(self, one_source):
-        assert isinstance(one_source, wbd.api.WBSearchResult)
-
-    def test_one_source_len(self, one_source):
-        assert len(one_source) == 1
-
-    def test_one_source_content(self, one_source):
-        assert one_source[0] == {
+SIMPLE_CALL_DEFINITIONS = [
+    SimpleCallDefinition(
+        function=wbd.get_incomelevel,
+        valid_id="HIC",
+        value={"id": "HIC", "iso2code": "XD", "value": "High income"},
+    ),
+    SimpleCallDefinition(
+        function=wbd.get_lendingtype,
+        valid_id="IBD",
+        value={"id": "IBD", "iso2code": "XF", "value": "IBRD"},
+    ),
+    SimpleCallDefinition(
+        function=wbd.get_source,
+        valid_id="2",
+        value={
             "id": "2",
             "lastupdated": "2019-12-20",
             "name": "World Development Indicators",
@@ -121,25 +39,12 @@ class TestSimpleQueries:
             "dataavailability": "Y",
             "metadataavailability": "Y",
             "concepts": "3",
-        }
-
-    def test_topics_type(self, topics):
-        assert isinstance(topics, wbd.api.WBSearchResult)
-
-    def test_topics_len(self, topics):
-        assert len(topics) > 1
-
-    def test_topics_content(self, topics):
-        assert any(i["id"] == "3" for i in topics)
-
-    def test_one_topic_type(self, one_topic):
-        assert isinstance(one_topic, wbd.api.WBSearchResult)
-
-    def test_one_topic_len(self, one_topic):
-        assert len(one_topic) == 1
-
-    def test_one_topic_content(self, one_topic):
-        assert one_topic[0] == {
+        },
+    ),
+    SimpleCallDefinition(
+        function=wbd.get_topic,
+        valid_id="3",
+        value={
             "id": "3",
             "value": "Economy & Growth",
             "sourceNote": (
@@ -155,33 +60,53 @@ class TestSimpleQueries:
                 "employment, investment, savings, consumption, government "
                 "spending, imports, and exports."
             ),
-        }
+        },
+    ),
+]
 
 
-class TestGetCountry:
-    def testAllCountries(self):
-        wbd.get_country()
+@pytest.fixture(params=SIMPLE_CALL_DEFINITIONS)
+def simple_call_data(request):
+    return SimpleCallData(
+        function=request.param.function,
+        result_all=request.param.function(),
+        result_one=request.param.function(request.param.valid_id),
+        id=request.param.valid_id,
+        value=request.param.value,
+    )
 
-    def testUSA(self):
-        wbd.get_country(country_id="USA")
 
-    def testHIC(self):
-        wbd.get_country(incomelevel="HIC")
+class TestSimpleQueries:
+    """
+    Test that results of simple queries are close to what we expect
+    """
 
-    def testIDB(self):
-        wbd.get_country(lendingtype="IDB")
+    def test_simple_all_type(self, simple_call_data):
+        assert isinstance(simple_call_data.result_all, wbd.api.WBSearchResult)
 
-    def testBadCountry(self):
+    def test_simple_all_len(self, simple_call_data):
+        assert len(simple_call_data.result_all) > 1
+
+    def test_simple_all_content(self, simple_call_data):
+        got = next(
+            i
+            for i in simple_call_data.result_all
+            if i["id"] == simple_call_data.id
+        )
+        assert got == simple_call_data.value
+
+    def test_simple_one_type(self, simple_call_data):
+        assert isinstance(simple_call_data.result_one, wbd.api.WBSearchResult)
+
+    def test_simple_one_len(self, simple_call_data):
+        assert len(simple_call_data.result_one) == 1
+
+    def test_simple_one_content(self, simple_call_data):
+        assert simple_call_data.result_one[0] == simple_call_data.value
+
+    def test_simple_bad_call(self, simple_call_data):
         with pytest.raises(RuntimeError):
-            wbd.get_country(country_id="Foobar")
-
-    def testBadIncomeLevel(self):
-        with pytest.raises(RuntimeError):
-            wbd.get_country(incomelevel="Foobar")
-
-    def testBadLendingType(self):
-        with pytest.raises(RuntimeError):
-            wbd.get_country(incomelevel="Foobar")
+            simple_call_data.function("Ain'tNotAThing")
 
 
 class TestGetIndicator:
