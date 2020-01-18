@@ -17,6 +17,34 @@ SimpleCallData = collections.namedtuple(
 
 SIMPLE_CALL_DEFINITIONS = [
     SimpleCallDefinition(
+        function=wbd.get_country,
+        valid_id="USA",  # USA! USA!
+        value={
+            "id": "USA",
+            "iso2Code": "US",
+            "name": "United States",
+            "region": {
+                "id": "NAC",
+                "iso2code": "XU",
+                "value": "North America",
+            },
+            "adminregion": {"id": "", "iso2code": "", "value": ""},
+            "incomeLevel": {
+                "id": "HIC",
+                "iso2code": "XD",
+                "value": "High income",
+            },
+            "lendingType": {
+                "id": "LNX",
+                "iso2code": "XX",
+                "value": "Not classified",
+            },
+            "capitalCity": "Washington D.C.",
+            "longitude": "-77.032",
+            "latitude": "38.8895",
+        },
+    ),
+    SimpleCallDefinition(
         function=wbd.get_incomelevel,
         valid_id="HIC",
         value={"id": "HIC", "iso2code": "XD", "value": "High income"},
@@ -62,6 +90,36 @@ SIMPLE_CALL_DEFINITIONS = [
             ),
         },
     ),
+    SimpleCallDefinition(
+        function=wbd.get_indicator,
+        valid_id="SP.POP.TOTL",
+        value={
+            "id": "SP.POP.TOTL",
+            "name": "Population, total",
+            "unit": "",
+            "source": {"id": "2", "value": "World Development Indicators"},
+            "sourceNote": (
+                "Total population is based on the de facto definition of "
+                "population, which counts all residents regardless of legal "
+                "status or citizenship. The values shown are midyear "
+                "estimates."
+            ),
+            "sourceOrganization": (
+                "(1) United Nations Population Division. World Population "
+                "Prospects: 2019 Revision. (2) Census reports and other "
+                "statistical publications from national statistical offices, "
+                "(3) Eurostat: Demographic Statistics, (4) United Nations "
+                "Statistical Division. Population and Vital Statistics "
+                "Reprot (various years), (5) U.S. Census Bureau: "
+                "International Database, and (6) Secretariat of the Pacific "
+                "Community: Statistics and Demography Programme."
+            ),
+            "topics": [
+                {"id": "19", "value": "Climate Change"},
+                {"id": "8", "value": "Health "},
+            ],
+        },
+    ),
 ]
 
 
@@ -88,12 +146,7 @@ class TestSimpleQueries:
         assert len(simple_call_data.result_all) > 1
 
     def test_simple_all_content(self, simple_call_data):
-        got = next(
-            i
-            for i in simple_call_data.result_all
-            if i["id"] == simple_call_data.id
-        )
-        assert got == simple_call_data.value
+        assert simple_call_data.value in simple_call_data.result_all
 
     def test_simple_one_type(self, simple_call_data):
         assert isinstance(simple_call_data.result_one, wbd.api.WBSearchResult)
@@ -110,19 +163,19 @@ class TestSimpleQueries:
 
 
 class TestGetIndicator:
-    def testGetAllIndicators(self):
-        wbd.get_indicator()
-
-    def testGetOneIndicator(self):
-        wbd.get_indicator("SP.POP.TOTL")
+    """Extra tests for Get Indicator"""
 
     def testGetIndicatorBySource(self):
-        wbd.get_indicator(source=1)
+        indicators = wbd.get_indicator(source=1)
+        assert all(i["source"]["id"] == "1" for i in indicators)
 
     def testGetIndicatorByTopic(self):
-        wbd.get_indicator(topic="1")
+        indicators = wbd.get_indicator(topic=1)
+        assert all(
+            any(t["id"] == "1" for t in i["topics"]) for i in indicators
+        )
 
-    def testGetIndicatorBySourceAndTopic(self):
+    def testGetIndicatorBySourceAndTopicFails(self):
         with pytest.raises(ValueError):
             wbd.get_indicator(source="1", topic=1)
 
@@ -186,12 +239,110 @@ class TestGetData:
         assert isinstance(data.last_updated, datetime.datetime)
 
 
-class TestSearchFunctions:
-    def testSearchCountry(self):
-        wbd.search_countries("United")
+SearchDefinition = collections.namedtuple(
+    "SearchDefinition",
+    [
+        "function",
+        "query",
+        "value",
+        "facets",
+        "facet_matches",
+        "facet_mismatches",
+    ],
+)
 
-    def testSearchIndicators(self):
-        wbd.search_indicators("gdp")
+SearchData = collections.namedtuple(
+    "SearchData",
+    [
+        "function",
+        "query",
+        "value",
+        "facets",
+        "results",
+        "results_facet_matches",
+        "results_facet_mismatches",
+    ],
+)
+
+search_definitions = [
+    SearchDefinition(
+        function=wbd.search_countries,
+        query="United",
+        value={
+            "id": "USA",
+            "iso2Code": "US",
+            "name": "United States",
+            "region": {
+                "id": "NAC",
+                "iso2code": "XU",
+                "value": "North America",
+            },
+            "adminregion": {"id": "", "iso2code": "", "value": ""},
+            "incomeLevel": {
+                "id": "HIC",
+                "iso2code": "XD",
+                "value": "High income",
+            },
+            "lendingType": {
+                "id": "LNX",
+                "iso2code": "XX",
+                "value": "Not classified",
+            },
+            "capitalCity": "Washington D.C.",
+            "longitude": "-77.032",
+            "latitude": "38.8895",
+        },
+        facets=["incomelevel", "lendingtype"],
+        facet_matches=["HIC", "LNX"],
+        facet_mismatches=["LIC", "IDX"],
+    )
+]
+
+
+@pytest.fixture(params=search_definitions)
+def search_data(request):
+    return SearchData(
+        function=request.param.function,
+        query=request.param.query,
+        value=request.param.value,
+        facets=request.param.facets,
+        results=request.param.function(request.param.query),
+        results_facet_matches=[
+            request.param.function(request.param.query, **{facet: value})
+            for facet, value in zip(
+                request.param.facets, request.param.facet_matches
+            )
+        ],
+        results_facet_mismatches=[
+            request.param.function(request.param.query, **{facet: value})
+            for facet, value in zip(
+                request.param.facets, request.param.facet_mismatches
+            )
+        ],
+    )
+
+
+class TestSearchFunctions:
+    def test_search_return_type(self, search_data):
+        assert isinstance(search_data.results, wbd.api.WBSearchResult)
+
+    def test_facet_return_type(self, search_data):
+        for results in (
+            search_data.results_facet_matches
+            + search_data.results_facet_mismatches
+        ):
+            assert isinstance(results, wbd.api.WBSearchResult)
+
+    def test_plain_search(self, search_data):
+        assert search_data.value in search_data.results
+
+    def test_matched_faceted_searches(self, search_data):
+        for results in search_data.results_facet_matches:
+            assert search_data.value in results
+
+    def test_mismatched_faceted_searches(self, search_data):
+        for results in search_data.results_facet_mismatches:
+            assert search_data.value not in results
 
 
 class TestGetSeries:
