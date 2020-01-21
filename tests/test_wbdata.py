@@ -279,18 +279,6 @@ def search_data(request):
     )
 
 
-get_data_defs = itertools.product(
-    ["ERI", ["ERI", "GNQ"]],
-    [
-        None,
-        dt.datetime(2011, 1, 1),
-        [dt.datetime(2011, 1, 1), dt.datetime(2012, 1, 1)],
-    ],
-    [2, 11],
-    [False, True],
-)
-
-
 class TestSearchFunctions:
     def test_search_return_type(self, search_data):
         assert isinstance(search_data.results, wbd.api.WBSearchResult)
@@ -314,6 +302,18 @@ class TestSearchFunctions:
             assert search_data.value not in results
 
 
+get_data_defs = itertools.product(
+    ["all", "ERI", ["ERI", "GNQ"]],
+    [
+        None,
+        dt.datetime(2010, 1, 1),
+        [dt.datetime(2010, 1, 1), dt.datetime(2011, 1, 1)],
+    ],
+    [None, "2", "11"],
+    [False, True],
+)
+
+
 @pytest.fixture(params=get_data_defs)
 def get_data_spec(request):
     country, data_date, source, convert_date = request.param
@@ -330,8 +330,8 @@ def get_data_spec(request):
         source=source,
         convert_date=convert_date,
         expected_country="Eritrea",
-        expected_date="2011",
-        expected_value={2: 2117039512.19512, 11: 2117008130.0813},
+        expected_date=dt.datetime(2010, 1, 1) if convert_date else "2010",
+        expected_value={"2": 2117039512.19512, "11": 2117008130.0813},
     )
 
 
@@ -340,13 +340,15 @@ class TestGetData:
         assert isinstance(get_data_spec.result, wbd.fetcher.WBResults)
 
     def test_country(self, get_data_spec):
-        if get_data_spec.country is None:
+        if get_data_spec.country == "all":
             return
         expected = (
             {get_data_spec.country}
             if isinstance(get_data_spec.country, str)
             else set(get_data_spec.country)
         )
+        # This is a little complicated because the API returns the iso3 id
+        # in different places from different sources (which is insane)
         got = set(
             [
                 i["countryiso3code"]
@@ -359,6 +361,32 @@ class TestGetData:
             assert got == expected
         except AssertionError:
             raise
+
+    #  Tests both string and converted dates
+    def test_data_date(self, get_data_spec):
+        if get_data_spec.data_date is None:
+            return
+        expected = (
+            set(get_data_spec.data_date)
+            if isinstance(get_data_spec.data_date, collections.Sequence)
+            else {get_data_spec.data_date}
+        )
+        if not get_data_spec.convert_date:
+            expected = {date.strftime("%Y") for date in expected}
+
+        got = {i["date"] for i in get_data_spec.result}
+        assert got == expected
+
+    # Tests source and correct value
+    def test_content(self, get_data_spec):
+        expected = get_data_spec.expected_value[get_data_spec.source or "2"]
+        got = next(
+            datum["value"]
+            for datum in get_data_spec.result
+            if datum["country"]["value"] == get_data_spec.expected_country
+            and datum["date"] == get_data_spec.expected_date
+        )
+        assert got == expected
 
     def testLastUpdated(self, get_data_spec):
         assert isinstance(get_data_spec.result.last_updated, dt.datetime)
