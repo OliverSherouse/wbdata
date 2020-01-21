@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 
 import collections
-import datetime
+import datetime as dt
+import itertools
 
 import pytest
 import wbdata as wbd
@@ -180,65 +181,6 @@ class TestGetIndicator:
             wbd.get_indicator(source="1", topic=1)
 
 
-class TestGetData:
-    def testIndicator(self):
-        wbd.get_data("SP.POP.TOTL")
-
-    def testOneCountry(self):
-        wbd.get_data("SP.POP.TOTL", country="USA")
-
-    def testTwoCountries(self):
-        wbd.get_data("SP.POP.TOTL", country=("chn", "bra"))
-
-    def testDate(self):
-        wbd.get_data(
-            "SP.POP.TOTL",
-            country="usa",
-            data_date=datetime.datetime(2006, 1, 1),
-        )
-
-    def testDateRange(self):
-        wbd.get_data(
-            "SP.POP.TOTL",
-            country="usa",
-            data_date=(
-                datetime.datetime(2006, 1, 1),
-                datetime.datetime(2010, 1, 1),
-            ),
-        )
-
-    def testConvertDate(self):
-        wbd.get_data("SP.POP.TOTL", country="usa", convert_date=True)
-
-    def testPandas(self):
-        wbd.get_data("SP.POP.TOTL", country="usa", pandas=True)
-
-    def testColumnName(self):
-        wbd.get_data(
-            "SP.POP.TOTL", country="usa", pandas=True, column_name="IForget"
-        )
-
-    def testSource(self):
-        data2 = wbd.get_data(
-            "NY.GDP.MKTP.CD",
-            source=2,
-            data_date=datetime.datetime(2010, 1, 1),
-            country="ERI",
-        )
-        assert data2[0]["value"] == 2117039512.19512
-        data11 = wbd.get_data(
-            "NY.GDP.MKTP.CD",
-            source=11,
-            data_date=datetime.datetime(2010, 1, 1),
-            country="ERI",
-        )
-        assert data11[0]["value"] == 2117008130.0813
-
-    def testLastUpdated(self):
-        data = wbd.get_data("SP.POP.TOTL", country="USA")
-        assert isinstance(data.last_updated, datetime.datetime)
-
-
 SearchDefinition = collections.namedtuple(
     "SearchDefinition",
     [
@@ -299,6 +241,21 @@ search_definitions = [
 ]
 
 
+GetDataSpec = collections.namedtuple(
+    "GetDataSpec",
+    [
+        "result",
+        "country",
+        "data_date",
+        "source",
+        "convert_date",
+        "expected_country",
+        "expected_date",
+        "expected_value",
+    ],
+)
+
+
 @pytest.fixture(params=search_definitions)
 def search_data(request):
     return SearchData(
@@ -320,6 +277,18 @@ def search_data(request):
             )
         ],
     )
+
+
+get_data_defs = itertools.product(
+    ["ERI", ["ERI", "GNQ"]],
+    [
+        None,
+        dt.datetime(2011, 1, 1),
+        [dt.datetime(2011, 1, 1), dt.datetime(2012, 1, 1)],
+    ],
+    [2, 11],
+    [False, True],
+)
 
 
 class TestSearchFunctions:
@@ -345,6 +314,56 @@ class TestSearchFunctions:
             assert search_data.value not in results
 
 
+@pytest.fixture(params=get_data_defs)
+def get_data_spec(request):
+    country, data_date, source, convert_date = request.param
+    return GetDataSpec(
+        result=wbd.get_data(
+            "NY.GDP.MKTP.CD",
+            country=country,
+            data_date=data_date,
+            source=source,
+            convert_date=convert_date,
+        ),
+        country=country,
+        data_date=data_date,
+        source=source,
+        convert_date=convert_date,
+        expected_country="Eritrea",
+        expected_date="2011",
+        expected_value={2: 2117039512.19512, 11: 2117008130.0813},
+    )
+
+
+class TestGetData:
+    def test_result_type(self, get_data_spec):
+        assert isinstance(get_data_spec.result, wbd.fetcher.WBResults)
+
+    def test_country(self, get_data_spec):
+        if get_data_spec.country is None:
+            return
+        expected = (
+            {get_data_spec.country}
+            if isinstance(get_data_spec.country, str)
+            else set(get_data_spec.country)
+        )
+        got = set(
+            [
+                i["countryiso3code"]
+                if i["countryiso3code"]
+                else i["country"]["id"]
+                for i in get_data_spec.result
+            ]
+        )
+        try:
+            assert got == expected
+        except AssertionError:
+            raise
+
+    def testLastUpdated(self, get_data_spec):
+        assert isinstance(get_data_spec.result.last_updated, dt.datetime)
+
+
 class TestGetSeries:
     indicator = "NY.GDP.MKTP.PP.KD"
 
@@ -362,14 +381,14 @@ class TestGetSeries:
         ]
 
     def testDate(self):
-        data_date = datetime.datetime(2008, 1, 1)
+        data_date = dt.datetime(2008, 1, 1)
         series = wbd.get_series(self.indicator, data_date=data_date)
         assert series.index.name == "country"
 
     def testDateRange(self):
         data_date = (
-            datetime.datetime(2008, 1, 1),
-            datetime.datetime(2010, 1, 1),
+            dt.datetime(2008, 1, 1),
+            dt.datetime(2010, 1, 1),
         )
         series = wbd.get_series(
             self.indicator, data_date=data_date, convert_date=True
@@ -380,21 +399,21 @@ class TestGetSeries:
     def testConvertDate(self):
         series = wbd.get_series(self.indicator, convert_date=True)
         assert isinstance(
-            series.index.get_level_values("date")[0], datetime.datetime
+            series.index.get_level_values("date")[0], dt.datetime
         )
 
     def testSource(self):
         data2 = wbd.get_series(
             "NY.GDP.MKTP.CD",
             source=2,
-            data_date=datetime.datetime(2010, 1, 1),
+            data_date=dt.datetime(2010, 1, 1),
             country="ERI",
         )
         assert data2.iloc[0] == 2117039512.19512
         data11 = wbd.get_series(
             "NY.GDP.MKTP.CD",
             source=11,
-            data_date=datetime.datetime(2010, 1, 1),
+            data_date=dt.datetime(2010, 1, 1),
             country="ERI",
         )
         assert data11.iloc[0] == 2117008130.0813
@@ -405,7 +424,7 @@ class TestGetSeries:
 
     def testLastUpdated(self):
         series = wbd.get_series(self.indicator)
-        assert isinstance(series.last_updated, datetime.datetime)
+        assert isinstance(series.last_updated, dt.datetime)
 
 
 class TestGetDataframe:
@@ -419,13 +438,13 @@ class TestGetDataframe:
         wbd.get_dataframe(self.indicators, country=countries)
 
     def testDate(self):
-        data_date = datetime.datetime(2008, 1, 1)
+        data_date = dt.datetime(2008, 1, 1)
         wbd.get_dataframe(self.indicators, data_date=data_date)
 
     def testDateRange(self):
         data_date = (
-            datetime.datetime(2008, 1, 1),
-            datetime.datetime(2010, 1, 1),
+            dt.datetime(2008, 1, 1),
+            dt.datetime(2010, 1, 1),
         )
         wbd.get_dataframe(self.indicators, data_date=data_date)
 
@@ -440,14 +459,14 @@ class TestGetDataframe:
         data2 = wbd.get_dataframe(
             {"NY.GDP.MKTP.CD": "gdp"},
             source=2,
-            data_date=datetime.datetime(2010, 1, 1),
+            data_date=dt.datetime(2010, 1, 1),
             country="ERI",
         )
         assert data2["gdp"].iloc[0] == 2117039512.19512
         data11 = wbd.get_dataframe(
             {"NY.GDP.MKTP.CD": "gdp"},
             source=11,
-            data_date=datetime.datetime(2010, 1, 1),
+            data_date=dt.datetime(2010, 1, 1),
             country="ERI",
         )
         assert data11["gdp"].iloc[0] == 2117008130.0813
@@ -457,6 +476,5 @@ class TestGetDataframe:
         assert isinstance(df.last_updated, dict)
         assert sorted(df.columns) == sorted(df.last_updated.keys())
         assert all(
-            isinstance(date, datetime.datetime)
-            for date in df.last_updated.values()
+            isinstance(date, dt.datetime) for date in df.last_updated.values()
         )
