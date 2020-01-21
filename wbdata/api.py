@@ -2,6 +2,7 @@
 wbdata.api: Where all the functions go
 """
 
+import collections
 import datetime
 import re
 import warnings
@@ -251,7 +252,7 @@ def get_data(
     query_url = "/".join((query_url, c_part, "indicators", indicator))
     args = {}
     if data_date:
-        if type(data_date) is tuple:
+        if isinstance(data_date, collections.Sequence):
             data_date_str = ":".join((i.strftime("%Y") for i in data_date))
             args["date"] = data_date_str
         else:
