@@ -52,28 +52,29 @@ class WBSearchResult(list):
             )
 
 
-class WBSeries(pd.Series):
-    """
-    A pandas Series with a last_updated attribute
-    """
+if pd:
 
-    _metadata = ["last_updated"]
+    class WBSeries(pd.Series):
+        """
+        A pandas Series with a last_updated attribute
+        """
 
-    @property
-    def _constructor(self):
-        return WBSeries
+        _metadata = ["last_updated"]
 
+        @property
+        def _constructor(self):
+            return WBSeries
 
-class WBDataFrame(pd.DataFrame):
-    """
-    A pandas DataFrame with a last_updated attribute
-    """
+    class WBDataFrame(pd.DataFrame):
+        """
+        A pandas DataFrame with a last_updated attribute
+        """
 
-    _metadata = ["last_updated"]
+        _metadata = ["last_updated"]
 
-    @property
-    def _constructor(self):
-        return WBDataFrame
+        @property
+        def _constructor(self):
+            return WBDataFrame
 
 
 @decorator
