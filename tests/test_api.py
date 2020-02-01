@@ -529,5 +529,8 @@ class TestGetSeries:
                 else get_series_spec.data_date.strftime("%Y")
             )
 
+    def test_column_name(self, get_series_spec):
+        assert get_series_spec.result.name == get_series_spec.column_name
+
     def testLastUpdated(self, get_series_spec):
         assert isinstance(get_series_spec.result.last_updated, dt.datetime)
