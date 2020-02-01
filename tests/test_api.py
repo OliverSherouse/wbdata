@@ -302,6 +302,11 @@ class TestSearchFunctions:
             assert search_data.value not in results
 
 
+COUNTRY_NAMES = {
+    "ERI": "Eritrea",
+    "GNQ": "Equatorial Guinea",
+}
+
 common_data_facets = [
     ["all", "ERI", ["ERI", "GNQ"]],
     [
@@ -448,113 +453,81 @@ def get_series_spec(request):
 
 
 class TestGetSeries:
-    def test_result_type(self, get_series_spec):
-        assert isinstance(get_series_spec.result, wbd.api.WBSeries)
+    def test_country_in_index(self, get_series_spec):
+        multiple_countries = (
+            get_series_spec.country == "all"
+            or not isinstance(get_series_spec.country, str)
+        )
+        multiple_dates = not isinstance(get_series_spec.data_date, dt.datetime)
+        if multiple_countries:
+            if multiple_dates or get_series_spec.keep_levels:
+                assert "country" in get_series_spec.result.index.names
+            else:
+                assert get_series_spec.result.index.name == "country"
+        elif get_series_spec.keep_levels:
+            assert "country" in get_series_spec.result.index.names
+        else:
+            try:
+                assert "country" not in get_series_spec.result.index.names
+            except AttributeError:
+                assert get_series_spec.result.index.names != "country"
 
-    # def test_country(self, get_series_spec):
-    #     if get_series_spec.country == "all":
-    #         return
-    #     expected = (
-    #         {get_series_spec.country}
-    #         if isinstance(get_series_spec.country, str)
-    #         else set(get_series_spec.country)
-    #     )
-    #     # This is a little complicated because the API returns the iso3 id
-    #     # in different places from different sources (which is insane)
-    #     got = set(
-    #         [
-    #             i["countryiso3code"]
-    #             if i["countryiso3code"]
-    #             else i["country"]["id"]
-    #             for i in get_series_spec.result
-    #         ]
-    #     )
-    #     try:
-    #         assert got == expected
-    #     except AssertionError:
-    #         raise
+    def test_date_in_index(self, get_series_spec):
+        multiple_countries = (
+            get_series_spec.country == "all"
+            or not isinstance(get_series_spec.country, str)
+        )
+        multiple_dates = not isinstance(get_series_spec.data_date, dt.datetime)
+        if multiple_dates:
+            if multiple_countries or get_series_spec.keep_levels:
+                assert "date" in get_series_spec.result.index.names
+            else:
+                assert get_series_spec.result.index.name == "date"
+        elif get_series_spec.keep_levels:
+            assert "date" in get_series_spec.result.index.names
+        elif not multiple_countries:
+            assert get_series_spec.result.index.name == "date"
+        else:
+            try:
+                assert "date" not in get_series_spec.result.index.names
+            except AttributeError:
+                assert get_series_spec.result.index.names != "date"
 
-    # #  Tests both string and converted dates
-    # def test_data_date(self, get_series_spec):
-    #     if get_series_spec.data_date is None:
-    #         return
-    #     expected = (
-    #         set(get_series_spec.data_date)
-    #         if isinstance(get_series_spec.data_date, collections.Sequence)
-    #         else {get_series_spec.data_date}
-    #     )
-    #     if not get_series_spec.convert_date:
-    #         expected = {date.strftime("%Y") for date in expected}
+    def test_country(self, get_series_spec):
+        try:
+            got = sorted(get_series_spec.result.index.unique(level="country"))
+        except KeyError:
+            return
 
-    #     got = {i["date"] for i in get_series_spec.result}
-    #     assert got == expected
+        if get_series_spec.country == "all":
+            assert len(got) > 2
+        elif isinstance(get_series_spec.country, str):
+            assert len(got) == 1
+            assert got[0] == COUNTRY_NAMES[get_series_spec.country]
+        else:
+            assert got == sorted(
+                COUNTRY_NAMES[country] for country in get_series_spec.country
+            )
 
-    # # Tests source and correct value
-    # def test_content(self, get_series_spec):
-    #     expected = get_series_spec.expected_value[
-    #       get_series_spec.source or "2"
-    #     ]
-    #     got = next(
-    #         datum["value"]
-    #         for datum in get_series_spec.result
-    #         if datum["country"]["value"] == get_series_spec.expected_country
-    #         and datum["date"] == get_series_spec.expected_date
-    #     )
-    #     assert got == expected
+    def test_date(self, get_series_spec):
+        try:
+            got = sorted(get_series_spec.result.index.unique(level="date"))
+        except KeyError:
+            return
+        if get_series_spec.data_date is None:
+            assert len(got) > 2
+        elif isinstance(get_series_spec.data_date, collections.Sequence):
+            assert got == sorted(
+                date if get_series_spec.convert_date else date.strftime("%Y")
+                for date in get_series_spec.data_date
+            )
+        else:
+            assert len(got) == 1
+            assert got[0] == (
+                get_series_spec.data_date
+                if get_series_spec.convert_date
+                else get_series_spec.data_date.strftime("%Y")
+            )
 
     def testLastUpdated(self, get_series_spec):
         assert isinstance(get_series_spec.result.last_updated, dt.datetime)
-
-
-# class TestGetDataframe:
-#     indicators = {
-#         "NY.GDP.MKTP.PP.KD": "gdp",
-#         "NY.GDP.PCAP.PP.KD": "gdppc",
-#     }
-
-#     def testCountries(self):
-#         countries = ("USA", "GBR")
-#         wbd.get_dataframe(self.indicators, country=countries)
-
-#     def testDate(self):
-#         data_date = dt.datetime(2008, 1, 1)
-#         wbd.get_dataframe(self.indicators, data_date=data_date)
-
-#     def testDateRange(self):
-#         data_date = (
-#             dt.datetime(2008, 1, 1),
-#             dt.datetime(2010, 1, 1),
-#         )
-#         wbd.get_dataframe(self.indicators, data_date=data_date)
-
-#     def testConvertDate(self):
-#         wbd.get_dataframe(self.indicators, convert_date=True)
-
-#     def testColumnName(self):
-#         df = wbd.get_dataframe(self.indicators)
-#         assert tuple(sorted(df.columns)) == ("gdp", "gdppc")
-
-#     def testSource(self):
-#         data2 = wbd.get_dataframe(
-#             {"NY.GDP.MKTP.CD": "gdp"},
-#             source=2,
-#             data_date=dt.datetime(2010, 1, 1),
-#             country="ERI",
-#         )
-#         assert data2["gdp"].iloc[0] == 2117039512.19512
-#         data11 = wbd.get_dataframe(
-#             {"NY.GDP.MKTP.CD": "gdp"},
-#             source=11,
-#             data_date=dt.datetime(2010, 1, 1),
-#             country="ERI",
-#         )
-#         assert data11["gdp"].iloc[0] == 2117008130.0813
-
-#     def testLastUpdated(self):
-#         df = wbd.get_dataframe(self.indicators)
-#         assert isinstance(df.last_updated, dict)
-#         assert sorted(df.columns) == sorted(df.last_updated.keys())
-#         assert all(
-#             isinstance(date, dt.datetime)
-#             for date in df.last_updated.values()
-#         )
