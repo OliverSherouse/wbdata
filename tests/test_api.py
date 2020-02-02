@@ -24,22 +24,10 @@ SIMPLE_CALL_DEFINITIONS = [
             "id": "USA",
             "iso2Code": "US",
             "name": "United States",
-            "region": {
-                "id": "NAC",
-                "iso2code": "XU",
-                "value": "North America",
-            },
+            "region": {"id": "NAC", "iso2code": "XU", "value": "North America"},
             "adminregion": {"id": "", "iso2code": "", "value": ""},
-            "incomeLevel": {
-                "id": "HIC",
-                "iso2code": "XD",
-                "value": "High income",
-            },
-            "lendingType": {
-                "id": "LNX",
-                "iso2code": "XX",
-                "value": "Not classified",
-            },
+            "incomeLevel": {"id": "HIC", "iso2code": "XD", "value": "High income"},
+            "lendingType": {"id": "LNX", "iso2code": "XX", "value": "Not classified"},
             "capitalCity": "Washington D.C.",
             "longitude": "-77.032",
             "latitude": "38.8895",
@@ -172,9 +160,7 @@ class TestGetIndicator:
 
     def testGetIndicatorByTopic(self):
         indicators = wbd.get_indicator(topic=1)
-        assert all(
-            any(t["id"] == "1" for t in i["topics"]) for i in indicators
-        )
+        assert all(any(t["id"] == "1" for t in i["topics"]) for i in indicators)
 
     def testGetIndicatorBySourceAndTopicFails(self):
         with pytest.raises(ValueError):
@@ -183,14 +169,7 @@ class TestGetIndicator:
 
 SearchDefinition = collections.namedtuple(
     "SearchDefinition",
-    [
-        "function",
-        "query",
-        "value",
-        "facets",
-        "facet_matches",
-        "facet_mismatches",
-    ],
+    ["function", "query", "value", "facets", "facet_matches", "facet_mismatches"],
 )
 
 SearchData = collections.namedtuple(
@@ -214,22 +193,10 @@ search_definitions = [
             "id": "USA",
             "iso2Code": "US",
             "name": "United States",
-            "region": {
-                "id": "NAC",
-                "iso2code": "XU",
-                "value": "North America",
-            },
+            "region": {"id": "NAC", "iso2code": "XU", "value": "North America"},
             "adminregion": {"id": "", "iso2code": "", "value": ""},
-            "incomeLevel": {
-                "id": "HIC",
-                "iso2code": "XD",
-                "value": "High income",
-            },
-            "lendingType": {
-                "id": "LNX",
-                "iso2code": "XX",
-                "value": "Not classified",
-            },
+            "incomeLevel": {"id": "HIC", "iso2code": "XD", "value": "High income"},
+            "lendingType": {"id": "LNX", "iso2code": "XX", "value": "Not classified"},
             "capitalCity": "Washington D.C.",
             "longitude": "-77.032",
             "latitude": "38.8895",
@@ -266,9 +233,7 @@ def search_data(request):
         results=request.param.function(request.param.query),
         results_facet_matches=[
             request.param.function(request.param.query, **{facet: value})
-            for facet, value in zip(
-                request.param.facets, request.param.facet_matches
-            )
+            for facet, value in zip(request.param.facets, request.param.facet_matches)
         ],
         results_facet_mismatches=[
             request.param.function(request.param.query, **{facet: value})
@@ -285,8 +250,7 @@ class TestSearchFunctions:
 
     def test_facet_return_type(self, search_data):
         for results in (
-            search_data.results_facet_matches
-            + search_data.results_facet_mismatches
+            search_data.results_facet_matches + search_data.results_facet_mismatches
         ):
             assert isinstance(results, wbd.api.WBSearchResult)
 
@@ -337,9 +301,7 @@ def get_data_spec(request):
         convert_date=convert_date,
         expected_country="Eritrea",
         expected_date=dt.datetime(2010, 1, 1) if convert_date else "2010",
-        expected_value={"2": 2117039512.19512, "11": 2117008130.0813}[
-            source or "2"
-        ],
+        expected_value={"2": 2117039512.19512, "11": 2117008130.0813}[source or "2"],
     )
 
 
@@ -359,9 +321,7 @@ class TestGetData:
         # in different places from different sources (which is insane)
         got = set(
             [
-                i["countryiso3code"]
-                if i["countryiso3code"]
-                else i["country"]["id"]
+                i["countryiso3code"] if i["countryiso3code"] else i["country"]["id"]
                 for i in get_data_spec.result
             ]
         )
@@ -451,9 +411,7 @@ def get_series_spec(request):
         keep_levels=keep_levels,
         expected_country="Eritrea",
         expected_date=dt.datetime(2010, 1, 1) if convert_date else "2010",
-        expected_value={"2": 2117039512.19512, "11": 2117008130.0813}[
-            source or "2"
-        ],
+        expected_value={"2": 2117039512.19512, "11": 2117008130.0813}[source or "2"],
         country_in_index=(
             country == "all" or not isinstance(country, str) or keep_levels
         ),
@@ -521,9 +479,7 @@ class TestGetSeries:
         else:
             index_loc = get_series_spec.expected_date
 
-        assert (
-            get_series_spec.result[index_loc] == get_series_spec.expected_value
-        )
+        assert get_series_spec.result[index_loc] == get_series_spec.expected_value
 
     def test_last_updated(self, get_series_spec):
         assert isinstance(get_series_spec.result.last_updated, dt.datetime)

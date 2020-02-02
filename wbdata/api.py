@@ -29,8 +29,8 @@ INDIC_ERROR = "Cannot specify more than one of indicator, source, and topic"
 
 class WBSearchResult(list):
     """
-    A list that prints out a user-friendly table when printed or returned on
-    the command line
+    A list that prints out a user-friendly table when printed or returned on the
+    command line
 
 
     Items are expected to be dict-like and have an "id" key and a "name" or
@@ -87,8 +87,8 @@ def uses_pandas(f, *args, **kwargs):
 
 def parse_value_or_iterable(arg):
     """
-    If arg is a single value, return it as a string; if an iterable, return
-    a ;-joined string of all values
+    If arg is a single value, return it as a string; if an iterable, return a
+    ;-joined string of all values
     """
     if str(arg) == arg:
         return arg
@@ -168,14 +168,14 @@ def get_series(
 
     :indicator: the desired indicator code
     :country: a country code, sequence of country codes, or "all" (default)
-    :data_date: the desired date as a datetime object or a 2-tuple with
-        start and end dates
+    :data_date: the desired date as a datetime object or a 2-tuple with start
+        and end dates
     :source: the specific source to retrieve data from (defaults on API to 2,
         World Development Indicators)
     :convert_date: if True, convert date field to a datetime.datetime object.
     :column_name: the desired name for the pandas column
-    :keep_levels: if True and pandas is True, don't reduce the number of
-        index levels returned if only getting one date or country
+    :keep_levels: if True and pandas is True, don't reduce the number of index
+        levels returned if only getting one date or country
     :cache: use the cache
     :returns: WBSeries
     """
@@ -219,8 +219,8 @@ def get_data(
 
     :indicator: the desired indicator code
     :country: a country code, sequence of country codes, or "all" (default)
-    :data_date: the desired date as a datetime object or a 2-tuple with
-        start and end dates
+    :data_date: the desired date as a datetime object or a 2-tuple with start
+        and end dates
     :source: the specific source to retrieve data from (defaults on API to 2,
         World Development Indicators)
     :convert_date: if True, convert date field to a datetime.datetime object.
@@ -330,9 +330,7 @@ def get_lendingtype(type_id=None, cache=True):
     return id_only_query(LTYPE_URL, type_id, cache=cache)
 
 
-def get_country(
-    country_id=None, incomelevel=None, lendingtype=None, cache=True
-):
+def get_country(country_id=None, incomelevel=None, lendingtype=None, cache=True):
     """
     Retrieve information on a country or regional aggregate.  Can specify
     either country_id, or the aggregates, but not both
@@ -373,9 +371,7 @@ def get_indicator(indicator=None, source=None, topic=None, cache=True):
     if indicator:
         if source or topic:
             raise ValueError(INDIC_ERROR)
-        query_url = "/".join(
-            (INDICATOR_URL, parse_value_or_iterable(indicator))
-        )
+        query_url = "/".join((INDICATOR_URL, parse_value_or_iterable(indicator)))
     elif source:
         if topic:
             raise ValueError(INDIC_ERROR)
@@ -383,9 +379,7 @@ def get_indicator(indicator=None, source=None, topic=None, cache=True):
             (SOURCES_URL, parse_value_or_iterable(source), "indicators")
         )
     elif topic:
-        query_url = "/".join(
-            (TOPIC_URL, parse_value_or_iterable(topic), "indicators")
-        )
+        query_url = "/".join((TOPIC_URL, parse_value_or_iterable(topic), "indicators"))
     else:
         query_url = INDICATOR_URL
     return WBSearchResult(fetcher.fetch(query_url, cache=cache))
@@ -394,8 +388,8 @@ def get_indicator(indicator=None, source=None, topic=None, cache=True):
 def search_indicators(query, source=None, topic=None, cache=True):
     """
     Search indicators for a certain regular expression.  Only one of source or
-    topic can be specified. In interactive mode, will return None and print
-    ids and names unless suppress_printing is True.
+    topic can be specified. In interactive mode, will return None and print ids
+    and names unless suppress_printing is True.
 
     :query: the term to match against indicator names
     :source: if present, id of desired source

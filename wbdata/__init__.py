@@ -3,7 +3,7 @@ wbdata: A wrapper for the World Bank API
 """
 __version__ = "0.3.0-dev"
 
-from .api import (
+from .api import (  # noqa: F401
     get_country,
     get_data,
     get_series,
