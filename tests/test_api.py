@@ -12,8 +12,8 @@ SimpleCallDefinition = collections.namedtuple(
     "SimpleCallDefinition", ["function", "valid_id", "value"]
 )
 
-SimpleCallData = collections.namedtuple(
-    "SimpleCallData", ["function", "result_all", "result_one", "id", "value"]
+SimpleCallSpec = collections.namedtuple(
+    "SimpleCallSpec", ["function", "result_all", "result_one", "id", "value"]
 )
 
 SIMPLE_CALL_DEFINITIONS = [
@@ -125,8 +125,8 @@ SIMPLE_CALL_DEFINITIONS = [
 
 
 @pytest.fixture(params=SIMPLE_CALL_DEFINITIONS)
-def simple_call_data(request):
-    return SimpleCallData(
+def simple_call_spec(request):
+    return SimpleCallSpec(
         function=request.param.function,
         result_all=request.param.function(),
         result_one=request.param.function(request.param.valid_id),
@@ -140,27 +140,27 @@ class TestSimpleQueries:
     Test that results of simple queries are close to what we expect
     """
 
-    def test_simple_all_type(self, simple_call_data):
-        assert isinstance(simple_call_data.result_all, wbd.api.WBSearchResult)
+    def test_simple_all_type(self, simple_call_spec):
+        assert isinstance(simple_call_spec.result_all, wbd.api.WBSearchResult)
 
-    def test_simple_all_len(self, simple_call_data):
-        assert len(simple_call_data.result_all) > 1
+    def test_simple_all_len(self, simple_call_spec):
+        assert len(simple_call_spec.result_all) > 1
 
-    def test_simple_all_content(self, simple_call_data):
-        assert simple_call_data.value in simple_call_data.result_all
+    def test_simple_all_content(self, simple_call_spec):
+        assert simple_call_spec.value in simple_call_spec.result_all
 
-    def test_simple_one_type(self, simple_call_data):
-        assert isinstance(simple_call_data.result_one, wbd.api.WBSearchResult)
+    def test_simple_one_type(self, simple_call_spec):
+        assert isinstance(simple_call_spec.result_one, wbd.api.WBSearchResult)
 
-    def test_simple_one_len(self, simple_call_data):
-        assert len(simple_call_data.result_one) == 1
+    def test_simple_one_len(self, simple_call_spec):
+        assert len(simple_call_spec.result_one) == 1
 
-    def test_simple_one_content(self, simple_call_data):
-        assert simple_call_data.result_one[0] == simple_call_data.value
+    def test_simple_one_content(self, simple_call_spec):
+        assert simple_call_spec.result_one[0] == simple_call_spec.value
 
-    def test_simple_bad_call(self, simple_call_data):
+    def test_simple_bad_call(self, simple_call_spec):
         with pytest.raises(RuntimeError):
-            simple_call_data.function("Ain'tNotAThing")
+            simple_call_spec.function("Ain'tNotAThing")
 
 
 class TestGetIndicator:
@@ -337,7 +337,9 @@ def get_data_spec(request):
         convert_date=convert_date,
         expected_country="Eritrea",
         expected_date=dt.datetime(2010, 1, 1) if convert_date else "2010",
-        expected_value={"2": 2117039512.19512, "11": 2117008130.0813},
+        expected_value={"2": 2117039512.19512, "11": 2117008130.0813}[
+            source or "2"
+        ],
     )
 
 
@@ -385,14 +387,13 @@ class TestGetData:
 
     # Tests source and correct value
     def test_content(self, get_data_spec):
-        expected = get_data_spec.expected_value[get_data_spec.source or "2"]
         got = next(
             datum["value"]
             for datum in get_data_spec.result
             if datum["country"]["value"] == get_data_spec.expected_country
             and datum["date"] == get_data_spec.expected_date
         )
-        assert got == expected
+        assert got == get_data_spec.expected_value
 
     def testLastUpdated(self, get_data_spec):
         assert isinstance(get_data_spec.result.last_updated, dt.datetime)
@@ -416,6 +417,8 @@ GetSeriesSpec = collections.namedtuple(
         "expected_country",
         "expected_date",
         "expected_value",
+        "country_in_index",
+        "date_in_index",
     ],
 )
 
@@ -448,56 +451,31 @@ def get_series_spec(request):
         keep_levels=keep_levels,
         expected_country="Eritrea",
         expected_date=dt.datetime(2010, 1, 1) if convert_date else "2010",
-        expected_value={"2": 2117039512.19512, "11": 2117008130.0813},
+        expected_value={"2": 2117039512.19512, "11": 2117008130.0813}[
+            source or "2"
+        ],
+        country_in_index=(
+            country == "all" or not isinstance(country, str) or keep_levels
+        ),
+        date_in_index=(not isinstance(data_date, dt.datetime) or keep_levels),
     )
 
 
 class TestGetSeries:
-    def test_country_in_index(self, get_series_spec):
-        multiple_countries = (
-            get_series_spec.country == "all"
-            or not isinstance(get_series_spec.country, str)
-        )
-        multiple_dates = not isinstance(get_series_spec.data_date, dt.datetime)
-        if multiple_countries:
-            if multiple_dates or get_series_spec.keep_levels:
-                assert "country" in get_series_spec.result.index.names
+    def test_index_labels(self, get_series_spec):
+        index = get_series_spec.result.index
+        if get_series_spec.country_in_index:
+            if get_series_spec.date_in_index:
+                assert index.names == ["country", "date"]
             else:
-                assert get_series_spec.result.index.name == "country"
-        elif get_series_spec.keep_levels:
-            assert "country" in get_series_spec.result.index.names
+                assert index.name == "country"
         else:
-            try:
-                assert "country" not in get_series_spec.result.index.names
-            except AttributeError:
-                assert get_series_spec.result.index.names != "country"
-
-    def test_date_in_index(self, get_series_spec):
-        multiple_countries = (
-            get_series_spec.country == "all"
-            or not isinstance(get_series_spec.country, str)
-        )
-        multiple_dates = not isinstance(get_series_spec.data_date, dt.datetime)
-        if multiple_dates:
-            if multiple_countries or get_series_spec.keep_levels:
-                assert "date" in get_series_spec.result.index.names
-            else:
-                assert get_series_spec.result.index.name == "date"
-        elif get_series_spec.keep_levels:
-            assert "date" in get_series_spec.result.index.names
-        elif not multiple_countries:
-            assert get_series_spec.result.index.name == "date"
-        else:
-            try:
-                assert "date" not in get_series_spec.result.index.names
-            except AttributeError:
-                assert get_series_spec.result.index.names != "date"
+            assert index.name == "date"
 
     def test_country(self, get_series_spec):
-        try:
-            got = sorted(get_series_spec.result.index.unique(level="country"))
-        except KeyError:
+        if not get_series_spec.country_in_index:
             return
+        got = sorted(get_series_spec.result.index.unique(level="country"))
 
         if get_series_spec.country == "all":
             assert len(got) > 2
@@ -510,10 +488,9 @@ class TestGetSeries:
             )
 
     def test_date(self, get_series_spec):
-        try:
-            got = sorted(get_series_spec.result.index.unique(level="date"))
-        except KeyError:
+        if not get_series_spec.date_in_index:
             return
+        got = sorted(get_series_spec.result.index.unique(level="date"))
         if get_series_spec.data_date is None:
             assert len(got) > 2
         elif isinstance(get_series_spec.data_date, collections.Sequence):
@@ -532,5 +509,31 @@ class TestGetSeries:
     def test_column_name(self, get_series_spec):
         assert get_series_spec.result.name == get_series_spec.column_name
 
-    def testLastUpdated(self, get_series_spec):
+    def test_value(self, get_series_spec):
+        if get_series_spec.country_in_index:
+            if get_series_spec.date_in_index:
+                index_loc = (
+                    get_series_spec.expected_country,
+                    get_series_spec.expected_date,
+                )
+            else:
+                index_loc = get_series_spec.expected_country
+        else:
+            index_loc = get_series_spec.expected_date
+
+        try:
+            assert (
+                get_series_spec.result[index_loc]
+                == get_series_spec.expected_value
+            )
+        except ValueError:
+            print(f"{index_loc=}")
+            print(f"{get_series_spec.result[index_loc]=}")
+            raise
+
+    def test_last_updated(self, get_series_spec):
         assert isinstance(get_series_spec.result.last_updated, dt.datetime)
+
+    def test_bad_value(self):
+        with pytest.raises(RuntimeError):
+            wbd.get_series("AintNotAThing")
