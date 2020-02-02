@@ -521,15 +521,9 @@ class TestGetSeries:
         else:
             index_loc = get_series_spec.expected_date
 
-        try:
-            assert (
-                get_series_spec.result[index_loc]
-                == get_series_spec.expected_value
-            )
-        except ValueError:
-            print(f"{index_loc=}")
-            print(f"{get_series_spec.result[index_loc]=}")
-            raise
+        assert (
+            get_series_spec.result[index_loc] == get_series_spec.expected_value
+        )
 
     def test_last_updated(self, get_series_spec):
         assert isinstance(get_series_spec.result.last_updated, dt.datetime)
