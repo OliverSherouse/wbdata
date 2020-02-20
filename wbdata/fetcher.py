@@ -32,9 +32,7 @@ class Cache(object):
 
     def __init__(self):
         self.path = Path(
-            appdirs.user_cache_dir(
-                appname="wbdata", version=wbdata.__version__
-            )
+            appdirs.user_cache_dir(appname="wbdata", version=wbdata.__version__)
         )
         self.path.parent.mkdir(parents=True, exist_ok=True)
         try:
@@ -74,7 +72,7 @@ def get_json_from_url(url, args):
     : args: a dictionary of GET arguments
     : returns: a string with the url contents
     """
-    for i in range(TRIES):
+    for _ in range(TRIES):
         try:
             return requests.get(url, args).text
         except requests.ConnectionError:
