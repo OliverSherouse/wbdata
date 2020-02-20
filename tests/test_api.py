@@ -112,7 +112,7 @@ SIMPLE_CALL_DEFINITIONS = [
 ]
 
 
-@pytest.fixture(params=SIMPLE_CALL_DEFINITIONS)
+@pytest.fixture(params=SIMPLE_CALL_DEFINITIONS, scope="class")
 def simple_call_spec(request):
     return SimpleCallSpec(
         function=request.param.function,
@@ -223,7 +223,7 @@ GetDataSpec = collections.namedtuple(
 )
 
 
-@pytest.fixture(params=search_definitions)
+@pytest.fixture(params=search_definitions, scope="class")
 def search_data(request):
     return SearchData(
         function=request.param.function,
@@ -284,7 +284,7 @@ common_data_facets = [
 get_data_defs = itertools.product(*common_data_facets)
 
 
-@pytest.fixture(params=get_data_defs)
+@pytest.fixture(params=get_data_defs, scope="class")
 def get_data_spec(request):
     country, data_date, source, convert_date = request.param
     return GetDataSpec(
@@ -359,8 +359,8 @@ class TestGetData:
         assert isinstance(get_data_spec.result.last_updated, dt.datetime)
 
 
-series_data_facets = itertools.product(
-    *(common_data_facets + [["value", "other"], [False, True]])
+series_data_facets = tuple(
+    itertools.product(*(common_data_facets + [["value", "other"], [False, True]]))
 )
 
 
@@ -383,7 +383,7 @@ GetSeriesSpec = collections.namedtuple(
 )
 
 
-@pytest.fixture(params=series_data_facets)
+@pytest.fixture(params=series_data_facets, scope="class")
 def get_series_spec(request):
     (
         country,
@@ -487,3 +487,138 @@ class TestGetSeries:
     def test_bad_value(self):
         with pytest.raises(RuntimeError):
             wbd.get_series("AintNotAThing")
+
+
+GetDataFrameSpec = collections.namedtuple(
+    "GetDataFrameSpec",
+    [
+        "result",
+        "country",
+        "data_date",
+        "source",
+        "convert_date",
+        "column_names",
+        "keep_levels",
+        "expected_country",
+        "expected_date",
+        "expected_column",
+        "expected_value",
+        "country_in_index",
+        "date_in_index",
+    ],
+)
+
+
+@pytest.fixture(params=series_data_facets, scope="class")
+def get_dataframe_spec(request):
+    (
+        country,
+        data_date,
+        source,
+        convert_date,
+        column_name,
+        keep_levels,
+    ) = request.param
+    return GetDataFrameSpec(
+        result=wbd.get_dataframe(
+            {"NY.GDP.MKTP.CD": column_name, "NY.GDP.MKTP.PP.CD": "ppp"},
+            country=country,
+            data_date=data_date,
+            source=source,
+            convert_date=convert_date,
+            keep_levels=keep_levels,
+        ),
+        country=country,
+        data_date=data_date,
+        source=source,
+        convert_date=convert_date,
+        column_names=[column_name, "ppp"],
+        keep_levels=keep_levels,
+        expected_country="Eritrea",
+        expected_date=dt.datetime(2010, 1, 1) if convert_date else "2010",
+        expected_column=column_name,
+        expected_value={"2": 2117039512.19512, "11": 2117008130.0813}[source or "2"],
+        country_in_index=(
+            country == "all" or not isinstance(country, str) or keep_levels
+        ),
+        date_in_index=(not isinstance(data_date, dt.datetime) or keep_levels),
+    )
+
+
+class TestGetDataFrame:
+    def test_index_labels(self, get_dataframe_spec):
+        index = get_dataframe_spec.result.index
+        if get_dataframe_spec.country_in_index:
+            if get_dataframe_spec.date_in_index:
+                assert index.names == ["country", "date"]
+            else:
+                assert index.name == "country"
+        else:
+            assert index.name == "date"
+
+    def test_country(self, get_dataframe_spec):
+        if not get_dataframe_spec.country_in_index:
+            return
+        got = sorted(get_dataframe_spec.result.index.unique(level="country"))
+
+        if get_dataframe_spec.country == "all":
+            assert len(got) > 2
+        elif isinstance(get_dataframe_spec.country, str):
+            assert len(got) == 1
+            assert got[0] == COUNTRY_NAMES[get_dataframe_spec.country]
+        else:
+            assert got == sorted(
+                COUNTRY_NAMES[country] for country in get_dataframe_spec.country
+            )
+
+    def test_date(self, get_dataframe_spec):
+        if not get_dataframe_spec.date_in_index:
+            return
+        got = sorted(get_dataframe_spec.result.index.unique(level="date"))
+        if get_dataframe_spec.data_date is None:
+            assert len(got) > 2
+        elif isinstance(get_dataframe_spec.data_date, collections.Sequence):
+            assert got == sorted(
+                date if get_dataframe_spec.convert_date else date.strftime("%Y")
+                for date in get_dataframe_spec.data_date
+            )
+        else:
+            assert len(got) == 1
+            assert got[0] == (
+                get_dataframe_spec.data_date
+                if get_dataframe_spec.convert_date
+                else get_dataframe_spec.data_date.strftime("%Y")
+            )
+
+    def test_column_name(self, get_dataframe_spec):
+        assert (
+            get_dataframe_spec.result.columns.tolist()
+            == get_dataframe_spec.column_names
+        )
+
+    def test_value(self, get_dataframe_spec):
+        if get_dataframe_spec.country_in_index:
+            if get_dataframe_spec.date_in_index:
+                index_loc = (
+                    get_dataframe_spec.expected_country,
+                    get_dataframe_spec.expected_date,
+                )
+            else:
+                index_loc = get_dataframe_spec.expected_country
+        else:
+            index_loc = get_dataframe_spec.expected_date
+
+        assert (
+            get_dataframe_spec.result[get_dataframe_spec.expected_column][index_loc]
+            == get_dataframe_spec.expected_value
+        )
+
+    def test_last_updated(self, get_dataframe_spec):
+        assert all(
+            isinstance(value, dt.datetime)
+            for value in get_dataframe_spec.result.last_updated.values()
+        )
+
+    def test_bad_value(self):
+        with pytest.raises(RuntimeError):
+            wbd.get_dataframe({"AintNotAThing": "bad value"})

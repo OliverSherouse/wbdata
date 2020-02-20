@@ -469,7 +469,7 @@ def get_dataframe(
         if result is None:
             result = series.to_frame()
         else:
-            result = result.join(series, how="outer")
+            result = result.join(series.to_frame(), how="outer")
     result = WBDataFrame(result)
     result.last_updated = {i.name: i.last_updated for i in serieses}
     return result
