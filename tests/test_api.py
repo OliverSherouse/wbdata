@@ -48,7 +48,6 @@ SIMPLE_CALL_DEFINITIONS = [
         valid_id="2",
         value={
             "id": "2",
-            "lastupdated": "2019-12-20",
             "name": "World Development Indicators",
             "code": "WDI",
             "description": "",
@@ -135,7 +134,14 @@ class TestSimpleQueries:
         assert len(simple_call_spec.result_all) > 1
 
     def test_simple_all_content(self, simple_call_spec):
-        assert simple_call_spec.value in simple_call_spec.result_all
+        expected = []
+        for val in simple_call_spec.result_all:
+            try:
+                del val["lastupdated"]
+            except KeyError:
+                pass
+            expected.append(val)
+        assert simple_call_spec.value in expected
 
     def test_simple_one_type(self, simple_call_spec):
         assert isinstance(simple_call_spec.result_one, wbd.api.WBSearchResult)
@@ -144,6 +150,11 @@ class TestSimpleQueries:
         assert len(simple_call_spec.result_one) == 1
 
     def test_simple_one_content(self, simple_call_spec):
+        got = simple_call_spec.result_one[0]
+        try:
+            del got["lastupdated"]
+        except KeyError:
+            pass
         assert simple_call_spec.result_one[0] == simple_call_spec.value
 
     def test_simple_bad_call(self, simple_call_spec):
