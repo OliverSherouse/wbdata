@@ -157,6 +157,7 @@ def get_series(
     indicator,
     country="all",
     data_date=None,
+    freq="Y",
     source=None,
     convert_date=False,
     column_name="value",
@@ -170,6 +171,9 @@ def get_series(
     :country: a country code, sequence of country codes, or "all" (default)
     :data_date: the desired date as a datetime object or a 2-tuple with start
         and end dates
+    :freq: the desired periodicity of the data, one of 'Y' (yearly), 'M'
+        (monthly), or 'Q' (quarterly). The indicator may or may not support the
+        specified frequency.
     :source: the specific source to retrieve data from (defaults on API to 2,
         World Development Indicators)
     :convert_date: if True, convert date field to a datetime.datetime object.
@@ -183,6 +187,7 @@ def get_series(
         indicator=indicator,
         country=country,
         data_date=data_date,
+        freq=freq,
         source=source,
         convert_date=convert_date,
         cache=cache,
@@ -203,10 +208,28 @@ def get_series(
     return series
 
 
+def data_date_to_str(data_date, freq):
+    """
+    Convert data_date to the appropriate representation base on freq
+
+
+    :data_date: A datetime.datetime object to be formatted
+    :freq: One of 'Y' (year), 'M' (month) or 'Q' (quarter)
+
+    """
+    if freq == "Y":
+        return data_date.strftime("%Y")
+    if freq == "M":
+        return data_date.strftime("%YM%m")
+    if freq == "Q":
+        return f"{data_date.year}Q{(data_date.month - 1) // 3 + 1}"
+
+
 def get_data(
     indicator,
     country="all",
     data_date=None,
+    freq="Y",
     source=None,
     convert_date=False,
     pandas=False,
@@ -221,6 +244,9 @@ def get_data(
     :country: a country code, sequence of country codes, or "all" (default)
     :data_date: the desired date as a datetime object or a 2-tuple with start
         and end dates
+    :freq: the desired periodicity of the data, one of 'Y' (yearly), 'M'
+        (monthly), or 'Q' (quarterly). The indicator may or may not support the
+        specified frequency.
     :source: the specific source to retrieve data from (defaults on API to 2,
         World Development Indicators)
     :convert_date: if True, convert date field to a datetime.datetime object.
@@ -253,11 +279,11 @@ def get_data(
     query_url = "/".join((query_url, c_part, "indicators", indicator))
     args = {}
     if data_date:
-        if isinstance(data_date, collections.Sequence):
-            data_date_str = ":".join((i.strftime("%Y") for i in data_date))
-            args["date"] = data_date_str
-        else:
-            args["date"] = data_date.strftime("%Y")
+        args["date"] = (
+            ":".join(data_date_to_str(dd, freq) for dd in data_date)
+            if isinstance(data_date, collections.Sequence)
+            else data_date_to_str(data_date, freq)
+        )
     if source:
         args["source"] = source
     data = fetcher.fetch(query_url, args, cache=cache)
@@ -426,6 +452,7 @@ def get_dataframe(
     indicators,
     country="all",
     data_date=None,
+    freq="Y",
     source=None,
     convert_date=False,
     keep_levels=False,
@@ -441,6 +468,9 @@ def get_dataframe(
     :country: a country code, sequence of country codes, or "all" (default)
     :data_date: the desired date as a datetime object or a 2-sequence with
         start and end dates
+    :freq: the desired periodicity of the data, one of 'Y' (yearly), 'M'
+        (monthly), or 'Q' (quarterly). The indicator may or may not support the
+        specified frequency.
     :source: the specific source to retrieve data from (defaults on API to 2,
         World Development Indicators)
     :convert_date: if True, convert date field to a datetime.datetime object.
@@ -455,6 +485,7 @@ def get_dataframe(
                 indicator=indicator,
                 country=country,
                 data_date=data_date,
+                freq=freq,
                 source=source,
                 convert_date=convert_date,
                 keep_levels=keep_levels,

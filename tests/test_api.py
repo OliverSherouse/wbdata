@@ -369,6 +369,21 @@ class TestGetData:
     def testLastUpdated(self, get_data_spec):
         assert isinstance(get_data_spec.result.last_updated, dt.datetime)
 
+    def testMonthlyFreq(self):
+        got = wbd.get_data(
+            "DPANUSSPB", country="bra", data_date=dt.datetime(2012, 1, 1), freq="M"
+        )[0]["value"]
+        assert got == 1.78886363636
+
+    def testQuarterlyFreq(self):
+        got = wbd.get_data(
+            "DP.DOD.DECD.CR.BC.CD",
+            country="chl",
+            data_date=dt.datetime(2013, 1, 1),
+            freq="Q",
+        )[0]["value"]
+        assert got == 31049138725.7794
+
 
 series_data_facets = tuple(
     itertools.product(*(common_data_facets + [["value", "other"], [False, True]]))
