@@ -369,6 +369,21 @@ class TestGetData:
     def testLastUpdated(self, get_data_spec):
         assert isinstance(get_data_spec.result.last_updated, dt.datetime)
 
+    def test_monthly_freq(self):
+        got = wbd.get_data(
+            "DPANUSSPB", country="bra", data_date=dt.datetime(2012, 1, 1), freq="M"
+        )[0]["value"]
+        assert got == 1.78886363636
+
+    def test_quarterly_freq(self):
+        got = wbd.get_data(
+            "DP.DOD.DECD.CR.BC.CD",
+            country="chl",
+            data_date=dt.datetime(2013, 1, 1),
+            freq="Q",
+        )[0]["value"]
+        assert got == 31049138725.7794
+
 
 series_data_facets = tuple(
     itertools.product(*(common_data_facets + [["value", "other"], [False, True]]))
@@ -498,6 +513,21 @@ class TestGetSeries:
     def test_bad_value(self):
         with pytest.raises(RuntimeError):
             wbd.get_series("AintNotAThing")
+
+    def test_monthly_freq(self):
+        got = wbd.get_series(
+            "DPANUSSPB", country="bra", data_date=dt.datetime(2012, 1, 1), freq="M"
+        )["2012M01"]
+        assert got == 1.78886363636
+
+    def test_quarterly_freq(self):
+        got = wbd.get_series(
+            "DP.DOD.DECD.CR.BC.CD",
+            country="chl",
+            data_date=dt.datetime(2013, 1, 1),
+            freq="Q",
+        )["2013Q1"]
+        assert got == 31049138725.7794
 
 
 GetDataFrameSpec = collections.namedtuple(
@@ -633,3 +663,21 @@ class TestGetDataFrame:
     def test_bad_value(self):
         with pytest.raises(RuntimeError):
             wbd.get_dataframe({"AintNotAThing": "bad value"})
+
+    def test_monthly_freq(self):
+        got = wbd.get_dataframe(
+            {"DPANUSSPB": "var"},
+            country="bra",
+            data_date=dt.datetime(2012, 1, 1),
+            freq="M",
+        )["var"]["2012M01"]
+        assert got == 1.78886363636
+
+    def test_quarterly_freq(self):
+        got = wbd.get_dataframe(
+            {"DP.DOD.DECD.CR.BC.CD": "var"},
+            country="chl",
+            data_date=dt.datetime(2013, 1, 1),
+            freq="Q",
+        )["var"]["2013Q1"]
+        assert got == 31049138725.7794
