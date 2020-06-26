@@ -58,7 +58,7 @@ exclude_patterns = []
 html_theme = "alabaster"
 
 html_sidebars = {
-    "*": ["about.html", "navigation.html", "relations.html", "searchbox.html",],
+    "*": ["about.html", "navigation.html", "relations.html", "searchbox.html"],
 }
 
 # Add any paths that contain custom static files (such as style sheets) here,
