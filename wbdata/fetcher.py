@@ -68,9 +68,9 @@ def get_json_from_url(url, args):
     """
     Fetch a url directly from the World Bank, up to TRIES tries
 
-    : url: the  url to retrieve
-    : args: a dictionary of GET arguments
-    : returns: a string with the url contents
+    :url: the  url to retrieve
+    :args: a dictionary of GET arguments
+    :returns: a string with the url contents
     """
     for _ in range(TRIES):
         try:

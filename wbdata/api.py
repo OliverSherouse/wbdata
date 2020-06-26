@@ -494,7 +494,6 @@ def get_dataframe(
         )
         for indicator, name in indicators.items()
     ]
-    print(type(serieses[0]))
     result = None
     for series in serieses:
         if result is None:
