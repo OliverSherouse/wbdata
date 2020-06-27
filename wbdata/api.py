@@ -251,7 +251,7 @@ def get_data(
         World Development Indicators)
     :convert_date: if True, convert date field to a datetime.datetime object.
     :cache: use the cache
-    :returns: list of dictionaries or pandas Series
+    :returns: list of dictionaries
     """
     if pandas:
         warnings.warn(
@@ -477,7 +477,7 @@ def get_dataframe(
     :keep_levels: if True don't reduce the number of index levels returned if
         only getting one date or country
     :cache: use the cache
-    :returns: a pandas DataFrame
+    :returns: a WBDataFrame
     """
     serieses = [
         (
