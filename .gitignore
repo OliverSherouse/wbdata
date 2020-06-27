@@ -1,6 +1,11 @@
 MANIFEST
+poetry.lock
+pip-wheel-metadata/
+yo.yaml
 
 *.py[cod]
+.cache
+.pytest_cache/
 
 # C extensions
 *.so

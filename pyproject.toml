@@ -1,0 +1,37 @@
+[tool.poetry]
+name = "wbdata"
+version = "0.3.0"
+description = "A library to access World Bank data"
+authors = ["Oliver Sherouse <oliver@oliversherouse.com>"]
+license = "GPL-2.0+"
+readme = "README.md"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering",
+]
+
+[tool.poetry.dependencies]
+python = ">=3.6"
+decorator = ">=4.0"
+requests = ">=2.0"
+pandas = {version = ">=0.17", optional=true}
+sphinx = {version = ">=2.2", optional=true}
+tabulate = ">=0.8.5"
+appdirs = "^1.4"
+
+[tool.poetry.extras]
+pandas = ["pandas"]
+docs = ["sphinx", "recommonmark", "ipython"]
+
+[tool.poetry.dev-dependencies]
+pytest-flake8 = ">=1.0"
+ipython = ">=7.8"
+flake8-bugbear = "^20.1.4"
+sphinx = "^3.0.3"
+recommonmark = "^0.6.0"
+
+[build-system]
+requires = ["poetry>=0.12"]
+build-backend = "poetry.masonry.api"

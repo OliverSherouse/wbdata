@@ -2,25 +2,12 @@
 wbdata.api: Where all the functions go
 """
 
-#Copyright (C) 2012-2013 Oliver Sherouse <Oliver DOT Sherouse AT gmail DOT com>
-
-#This program is free software; you can redistribute it and/or
-#modify it under the terms of the GNU General Public License
-#as published by the Free Software Foundation; either version 2
-#of the License, or (at your option) any later version.
-
-#This program is distributed in the hope that it will be useful,
-#but WITHOUT ANY WARRANTY; without even the implied warranty of
-#MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#GNU General Public License for more details.
-
-#You should have received a copy of the GNU General Public License
-#along with this program; if not. If not, see <http://www.gnu.org/licenses/>.
-
-from __future__ import (print_function, division, absolute_import,
-                        unicode_literals)
-
+import collections
 import datetime
+import re
+import warnings
+
+import tabulate
 
 try:
     import pandas as pd
@@ -30,19 +17,64 @@ except ImportError:
 from decorator import decorator
 from . import fetcher
 
-# Detect Interactivity
-import __main__ as main
-INTERACTIVE = not hasattr(main, "__file__")
-del(main)
-
-BASE_URL = "http://api.worldbank.org"
-COUNTRIES_URL = "{0}/countries".format(BASE_URL)
-ILEVEL_URL = "{0}/incomeLevels".format(BASE_URL)
-INDICATOR_URL = "{0}/indicator".format(BASE_URL)
-LTYPE_URL = "{0}/lendingTypes".format(BASE_URL)
-SOURCES_URL = "{0}/sources".format(BASE_URL)
-TOPIC_URL = "{0}/topics".format(BASE_URL)
+BASE_URL = "https://api.worldbank.org/v2"
+COUNTRIES_URL = f"{BASE_URL}/countries"
+ILEVEL_URL = f"{BASE_URL}/incomeLevels"
+INDICATOR_URL = f"{BASE_URL}/indicators"
+LTYPE_URL = f"{BASE_URL}/lendingTypes"
+SOURCES_URL = f"{BASE_URL}/sources"
+TOPIC_URL = f"{BASE_URL}/topics"
 INDIC_ERROR = "Cannot specify more than one of indicator, source, and topic"
+
+
+class WBSearchResult(list):
+    """
+    A list that prints out a user-friendly table when printed or returned on the
+    command line
+
+
+    Items are expected to be dict-like and have an "id" key and a "name" or
+    "value" key
+    """
+
+    def __repr__(self):
+        try:
+            return tabulate.tabulate(
+                [[o["id"], o["name"]] for o in self],
+                headers=["id", "name"],
+                tablefmt="simple",
+            )
+        except KeyError:
+            return tabulate.tabulate(
+                [[o["id"], o["value"]] for o in self],
+                headers=["id", "value"],
+                tablefmt="simple",
+            )
+
+
+if pd:
+
+    class WBSeries(pd.Series):
+        """
+        A pandas Series with a last_updated attribute
+        """
+
+        _metadata = ["last_updated"]
+
+        @property
+        def _constructor(self):
+            return WBSeries
+
+    class WBDataFrame(pd.DataFrame):
+        """
+        A pandas DataFrame with a last_updated attribute
+        """
+
+        _metadata = ["last_updated"]
+
+        @property
+        def _constructor(self):
+            return WBDataFrame
 
 
 @decorator
@@ -55,8 +87,8 @@ def uses_pandas(f, *args, **kwargs):
 
 def parse_value_or_iterable(arg):
     """
-    If arg is a single value, return it as a string; if an iterable, return
-    a ;-joined string of all values
+    If arg is a single value, return it as a string; if an iterable, return a
+    ;-joined string of all values
     """
     if str(arg) == arg:
         return arg
@@ -92,7 +124,9 @@ def convert_dates_to_datetime(data):
     Return a datetime.datetime object from a date string as provided by the
     World Bank
     """
-    first = data[0]['date']
+    first = data[0]["date"]
+    if isinstance(first, datetime.datetime):
+        return data
     if "M" in first:
         converter = convert_month_to_datetime
     elif "Q" in first:
@@ -100,12 +134,12 @@ def convert_dates_to_datetime(data):
     else:
         converter = convert_year_to_datetime
     for datum in data:
-        datum_date = datum['date']
+        datum_date = datum["date"]
         if "MRV" in datum_date:
             continue
         if "-" in datum_date:
             continue
-        datum['date'] = converter(datum_date)
+        datum["date"] = converter(datum_date)
     return data
 
 
@@ -115,146 +149,214 @@ def cast_float(value):
     """
     try:
         return float(value)
-    except ValueError:
-        return None
-    except TypeError:
+    except (ValueError, TypeError):
         return None
 
 
-@uses_pandas
-def convert_to_dataframe(data, column_name):
-    """
-    Convert a set of values to a dataframe with columns for country and date
-    """
-    return pd.DataFrame({"country": [i["country"]["value"] for i in data],
-                         "date": [i["date"] for i in data],
-                         column_name: [cast_float(i["value"]) for i in data]
-                         })
-
-
-def get_data(indicator, country="all", data_date=None, convert_date=False,
-             pandas=False, column_name="value", keep_levels=False):
+def get_series(
+    indicator,
+    country="all",
+    data_date=None,
+    freq="Y",
+    source=None,
+    convert_date=False,
+    column_name="value",
+    keep_levels=False,
+    cache=True,
+):
     """
     Retrieve indicators for given countries and years
 
     :indicator: the desired indicator code
     :country: a country code, sequence of country codes, or "all" (default)
-    :date: the desired date as a datetime object or a 2-tuple with
-        start and end dates
+    :data_date: the desired date as a datetime object or a 2-tuple with start
+        and end dates
+    :freq: the desired periodicity of the data, one of 'Y' (yearly), 'M'
+        (monthly), or 'Q' (quarterly). The indicator may or may not support the
+        specified frequency.
+    :source: the specific source to retrieve data from (defaults on API to 2,
+        World Development Indicators)
     :convert_date: if True, convert date field to a datetime.datetime object.
-    :pandas: if True, return results as a pandas Series.  The index will be the
-        date of the data if only one country is specified, the countries if
-        only one date is specified, or a multi-index of country and date
-        otherwise.
     :column_name: the desired name for the pandas column
-    :keep_levels: if True and pandas is True, don't reduce the number of
-        index levels returned if only getting one date or country
+    :keep_levels: if True and pandas is True, don't reduce the number of index
+        levels returned if only getting one date or country
+    :cache: use the cache
+    :returns: WBSeries
+    """
+    raw_data = get_data(
+        indicator=indicator,
+        country=country,
+        data_date=data_date,
+        freq=freq,
+        source=source,
+        convert_date=convert_date,
+        cache=cache,
+    )
+    df = pd.DataFrame(
+        [[i["country"]["value"], i["date"], i["value"]] for i in raw_data],
+        columns=["country", "date", column_name],
+    )
+    df[column_name] = df[column_name].map(cast_float)
+    if not keep_levels and len(df["country"].unique()) == 1:
+        df = df.set_index("date")
+    elif not keep_levels and len(df["date"].unique()) == 1:
+        df = df.set_index("country")
+    else:
+        df = df.set_index(["country", "date"])
+    series = WBSeries(df[column_name])
+    series.last_updated = raw_data.last_updated
+    return series
+
+
+def data_date_to_str(data_date, freq):
+    """
+    Convert data_date to the appropriate representation base on freq
+
+
+    :data_date: A datetime.datetime object to be formatted
+    :freq: One of 'Y' (year), 'M' (month) or 'Q' (quarter)
+
+    """
+    if freq == "Y":
+        return data_date.strftime("%Y")
+    if freq == "M":
+        return data_date.strftime("%YM%m")
+    if freq == "Q":
+        return f"{data_date.year}Q{(data_date.month - 1) // 3 + 1}"
+
+
+def get_data(
+    indicator,
+    country="all",
+    data_date=None,
+    freq="Y",
+    source=None,
+    convert_date=False,
+    pandas=False,
+    column_name="value",
+    keep_levels=False,
+    cache=True,
+):
+    """
+    Retrieve indicators for given countries and years
+
+    :indicator: the desired indicator code
+    :country: a country code, sequence of country codes, or "all" (default)
+    :data_date: the desired date as a datetime object or a 2-tuple with start
+        and end dates
+    :freq: the desired periodicity of the data, one of 'Y' (yearly), 'M'
+        (monthly), or 'Q' (quarterly). The indicator may or may not support the
+        specified frequency.
+    :source: the specific source to retrieve data from (defaults on API to 2,
+        World Development Indicators)
+    :convert_date: if True, convert date field to a datetime.datetime object.
+    :cache: use the cache
     :returns: list of dictionaries or pandas Series
     """
+    if pandas:
+        warnings.warn(
+            (
+                "Argument 'pandas' is deprecated and will be removed in a "
+                "future version. Use get_series or get_dataframe instead."
+            ),
+            PendingDeprecationWarning,
+        )
+        return get_series(
+            indicator=indicator,
+            country=country,
+            data_date=data_date,
+            source=source,
+            convert_date=convert_date,
+            column_name=column_name,
+            keep_levels=keep_levels,
+            cache=cache,
+        )
     query_url = COUNTRIES_URL
     try:
         c_part = parse_value_or_iterable(country)
     except TypeError:
         raise TypeError("'country' must be a string or iterable'")
     query_url = "/".join((query_url, c_part, "indicators", indicator))
-    args = []
+    args = {}
     if data_date:
-        if type(data_date) is tuple:
-            data_date_str = ":".join((i.strftime("%Y") for i in data_date))
-            args.append(("date", data_date_str))
-        else:
-            args.append(("date", data_date.strftime("%Y")))
-    data = fetcher.fetch(query_url, args)
+        args["date"] = (
+            ":".join(data_date_to_str(dd, freq) for dd in data_date)
+            if isinstance(data_date, collections.Sequence)
+            else data_date_to_str(data_date, freq)
+        )
+    if source:
+        args["source"] = source
+    data = fetcher.fetch(query_url, args, cache=cache)
     if convert_date:
         data = convert_dates_to_datetime(data)
-    if pandas:
-        df = convert_to_dataframe(data, column_name)
-        if not keep_levels and len(df["country"].unique()) == 1:
-            df = df.set_index("date")
-        elif not keep_levels and len(df["date"].unique()) == 1:
-            df = df.set_index("country")
-        else:
-            df = df.set_index(["country", "date"])
-        return df[column_name]
     return data
 
 
-def id_only_query(query_url, query_id, display):
+def id_only_query(query_url, query_id, cache):
     """
     Retrieve information when ids are the only arguments
 
     :query_url: the base url to use for the query
-    :query_id: an id number.  None returns all sources
-    :display: if True,print ids and names instead of returning results.
-        Defaults to True if in interactive prompt, or False otherwise
-    :returns: if display is False, a dictionary describing a source
+    :query_id: an id or sequence of ids
+    :cache: use the cache
+    :returns: WBSearchResult containing dictionary objects describing results
     """
-    if display is None:
-        display = INTERACTIVE
     if query_id:
         query_url = "/".join((query_url, parse_value_or_iterable(query_id)))
-    results = fetcher.fetch(query_url)
-    if display:
-        print_ids_and_names(results)
-    else:
-        return results
+    return WBSearchResult(fetcher.fetch(query_url))
 
 
-def get_source(source_id=None, display=None):
+def get_source(source_id=None, cache=True):
     """
     Retrieve information on a source
 
     :source_id: a source id or sequence thereof.  None returns all sources
-    :display: if True,print ids and names instead of returning results.
-        Defaults to True if in interactive prompt, or False otherwise
-    :returns: if display is False, a dictionary describing a source
+    :cache: use the cache
+    :returns: WBSearchResult containing dictionary objects describing selected
+        sources
     """
-    return id_only_query(SOURCES_URL, source_id, display)
+    return id_only_query(SOURCES_URL, source_id, cache=cache)
 
 
-def get_incomelevel(level_id=None, display=None):
+def get_incomelevel(level_id=None, cache=True):
     """
     Retrieve information on an income level aggregate
 
     :level_id: a level id or sequence thereof.  None returns all income level
         aggregates
-    :display: if True,print ids and names instead of returning results.
-        Defaults to True if in interactive prompt, or False otherwise
-    :returns: if display is False a dictionary describing an income level
-        aggregate
+    :cache: use the cache
+    :returns: WBSearchResult containing dictionary objects describing selected
+        income level aggregates
     """
-    return id_only_query(ILEVEL_URL, level_id, display)
+    return id_only_query(ILEVEL_URL, level_id, cache=cache)
 
 
-def get_topic(topic_id=None, display=None):
+def get_topic(topic_id=None, cache=True):
     """
     Retrieve information on a topic
 
     :topic_id: a topic id or sequence thereof.  None returns all topics
-    :display: if True,print ids and names instead of returning results.
-        Defaults to True if in interactive prompt, or False otherwise
-    :returns: if display is False, a dictionary describing an income level
-        aggregate
+    :cache: use the cache
+    :returns: WBSearchResult containing dictionary objects describing selected
+        topic aggregates
     """
-    return id_only_query(TOPIC_URL, topic_id, display)
+    return id_only_query(TOPIC_URL, topic_id, cache=cache)
 
 
-def get_lendingtype(type_id=None, display=None):
+def get_lendingtype(type_id=None, cache=True):
     """
     Retrieve information on an income level aggregate
 
     :level_id: lending type id or sequence thereof.  None returns all lending
         type aggregates
-    :display: if True,print ids and names instead of returning
-        results. Defaults to True if in interactive prompt, or False otherwise
-    :returns: if display is False, a dictionary describing an lending type
-        aggregate
+    :cache: use the cache
+    :returns: WBSearchResult containing dictionary objects describing selected
+        topic aggregates
     """
-    return id_only_query(LTYPE_URL, type_id, display)
+    return id_only_query(LTYPE_URL, type_id, cache=cache)
 
 
-def get_country(country_id=None, incomelevel=None, lendingtype=None,
-                display=None):
+def get_country(country_id=None, incomelevel=None, lendingtype=None, cache=True):
     """
     Retrieve information on a country or regional aggregate.  Can specify
     either country_id, or the aggregates, but not both
@@ -263,30 +365,23 @@ def get_country(country_id=None, incomelevel=None, lendingtype=None,
         and aggregates.
     :incomelevel: desired incomelevel id or ids.
     :lendingtype: desired lendingtype id or ids.
-    :display: if True,print ids and names instead of returning results.
-        Defaults to True if in interactive prompt, or False otherwise.
-    :returns: if display is False, a dictionary describing an lending type
-        aggregate.
+    :cache: use the cache
+    :returns: WBSearchResult containing dictionary objects representing each
+        country
     """
-    if display is None:
-        display = INTERACTIVE
     if country_id:
         if incomelevel or lendingtype:
             raise ValueError("Can't specify country_id and aggregates")
-        return id_only_query(COUNTRIES_URL, country_id, display)
-    args = []
+        return id_only_query(COUNTRIES_URL, country_id, cache=cache)
+    args = {}
     if incomelevel:
-        args.append(("incomeLevel", parse_value_or_iterable(incomelevel)))
+        args["incomeLevel"] = parse_value_or_iterable(incomelevel)
     if lendingtype:
-        args.append(("lendingType", parse_value_or_iterable(lendingtype)))
-    results = fetcher.fetch(COUNTRIES_URL, args)
-    if display:
-        print_ids_and_names(results)
-    else:
-        return results
+        args["lendingType"] = parse_value_or_iterable(lendingtype)
+    return WBSearchResult(fetcher.fetch(COUNTRIES_URL, args, cache=cache))
 
 
-def get_indicator(indicator=None, source=None, topic=None, display=None):
+def get_indicator(indicator=None, source=None, topic=None, cache=True):
     """
     Retrieve information about an indicator or indicators.  Only one of
     indicator, source, and topic can be specified.  Specifying none of the
@@ -295,107 +390,74 @@ def get_indicator(indicator=None, source=None, topic=None, display=None):
     :indicator: an indicator code or sequence thereof
     :source: a source id or sequence thereof
     :topic: a topic id or sequence thereof
-    :display: if True,print ids and names instead of returning results.
-        Defaults to True if in interactive prompt, or False otherwise
-    :returns: if display is False, a list of dictionary objects representing
+    :cache: use the cache
+    :returns: WBSearchResult containing dictionary objects representing
         indicators
     """
-    if display is None:
-        display = INTERACTIVE
     if indicator:
         if source or topic:
             raise ValueError(INDIC_ERROR)
-        query_url = "/".join((INDICATOR_URL,
-                              parse_value_or_iterable(indicator)))
+        query_url = "/".join((INDICATOR_URL, parse_value_or_iterable(indicator)))
     elif source:
         if topic:
             raise ValueError(INDIC_ERROR)
-        query_url = "/".join((SOURCES_URL, parse_value_or_iterable(source),
-                              "indicators"))
+        query_url = "/".join(
+            (SOURCES_URL, parse_value_or_iterable(source), "indicators")
+        )
     elif topic:
-        query_url = "/".join((TOPIC_URL, parse_value_or_iterable(topic),
-                              "indicators"))
+        query_url = "/".join((TOPIC_URL, parse_value_or_iterable(topic), "indicators"))
     else:
         query_url = INDICATOR_URL
-    results = fetcher.fetch(query_url)
-    if display:
-        print_ids_and_names(results)
-    else:
-        return results
+    return WBSearchResult(fetcher.fetch(query_url, cache=cache))
 
 
-def search_indicators(query, source=None, topic=None, display=None):
+def search_indicators(query, source=None, topic=None, cache=True):
     """
-    Search indicators for a certain term.  Very simple.  Only one of source or
-    topic can be specified. In interactive mode, will return None and print
-    ids and names unless suppress_printing is True.
+    Search indicators for a certain regular expression.  Only one of source or
+    topic can be specified. In interactive mode, will return None and print ids
+    and names unless suppress_printing is True.
 
     :query: the term to match against indicator names
     :source: if present, id of desired source
     :topic: if present, id of desired topic
-    :display: if True,print ids and names instead of returning results.
-        Defaults to True if in interactive prompt, or False otherwise
-    :returns: a list of dictionaries representing indicators if display is
-        False
+    :cache: use the cache
+    :returns: WBSearchResult containing dictionary objects representing search
+        indicators
     """
-    if display is None:
-        display = INTERACTIVE
-    indicators = get_indicator(source=source, topic=topic, display=False)
-    lower = query.lower()
-    matched = [i for i in indicators if lower in i["name"].lower()]
-    if display:
-        print_ids_and_names(matched)
-    else:
-        return matched
+    indicators = get_indicator(source=source, topic=topic, cache=cache)
+    pattern = re.compile(query, re.IGNORECASE)
+    return WBSearchResult(i for i in indicators if pattern.search(i["name"]))
 
 
-def search_countries(query, incomelevel=None, lendingtype=None, display=None):
+def search_countries(query, incomelevel=None, lendingtype=None, cache=True):
     """
     Search countries by name.  Very simple search.
 
     :query: the string to match against country names
     :incomelevel: if present, search only the matching incomelevel
     :lendingtype: if present, search only the matching lendingtype
-    :display: if True,print ids and names instead of returning results.
-        Defaults to True if in interactive prompt, or False otherwise
-    :returns: a list of dictionaries representing countries if display is
-        False
+    :cache: use the cache
+    :returns: WBSearchResult containing dictionary objects representing
+        countries
     """
-    if display is None:
-        display = INTERACTIVE
-    countries = get_country(incomelevel=incomelevel, lendingtype=lendingtype,
-                            display=False)
-    lower = query.lower()
-    matched = [i for i in countries if lower in i["name"].lower()]
-    if display:
-        print_ids_and_names(matched)
-    else:
-        return matched
-
-
-def print_ids_and_names(objs):
-    """
-    Courtesy function to display ids and names from lists returned by wbdata.
-    This will mostly be useful in interactive mode.
-
-    :objs: a list of dictionary objects as returned by wbdata
-    """
-    try:
-        max_length = str(max((len(i['id']) for i in objs)))
-    except ValueError:
-        return
-    for i in objs:
-        try:
-            templ = "{id:" + max_length + "}\t{name}"
-            print(templ.format(**i))
-        except KeyError:
-            templ = "{id:" + max_length + "}\t{value}"
-            print(templ.format(**i))
+    countries = get_country(
+        incomelevel=incomelevel, lendingtype=lendingtype, cache=cache
+    )
+    pattern = re.compile(query, re.IGNORECASE)
+    return WBSearchResult(i for i in countries if pattern.search(i["name"]))
 
 
 @uses_pandas
-def get_dataframe(indicators, country="all", data_date=None,
-                  convert_date=False, keep_levels=False):
+def get_dataframe(
+    indicators,
+    country="all",
+    data_date=None,
+    freq="Y",
+    source=None,
+    convert_date=False,
+    keep_levels=False,
+    cache=True,
+):
     """
     Convenience function to download a set of indicators and  merge them into a
         pandas DataFrame.  The index will be the same as if calls were made to
@@ -406,55 +468,38 @@ def get_dataframe(indicators, country="all", data_date=None,
     :country: a country code, sequence of country codes, or "all" (default)
     :data_date: the desired date as a datetime object or a 2-sequence with
         start and end dates
+    :freq: the desired periodicity of the data, one of 'Y' (yearly), 'M'
+        (monthly), or 'Q' (quarterly). The indicator may or may not support the
+        specified frequency.
+    :source: the specific source to retrieve data from (defaults on API to 2,
+        World Development Indicators)
     :convert_date: if True, convert date field to a datetime.datetime object.
-    :keep_levels: if True and pandas is True, don't reduce the number of
-        index levels returned if only getting one date or country
-    :returns: a pandas dataframe
+    :keep_levels: if True don't reduce the number of index levels returned if
+        only getting one date or country
+    :cache: use the cache
+    :returns: a pandas DataFrame
     """
-    to_df = {indicators[i]: get_data(i, country, data_date, convert_date,
-                                     pandas=True, keep_levels=keep_levels)
-             for i in indicators}
-    return pd.DataFrame(to_df)
-
-
-@uses_pandas
-def get_panel(indicators, country="all", data_date=None, convert_date=False,
-              items="indicators", major_axis="dates"):
-    """
-    Convenience function to download a set of indicators and  merge them into a
-        pandas Panel.
-
-    :indicators: An dictionary where the keys are desired indicators and the
-        values are the desired column names
-    :country: a country code, sequence of country codes, or "all" (default)
-    :data_date: a 2-sequence with start and end dates
-    :convert_date: if True, convert date field to a datetime.datetime object.
-    :items: which values to use as the Panel items.  One of "indicators",
-        "countries", "dates"
-    :major_axis: which values to use as major axis for each item.  One of
-        "indicators", "countries", "dates"
-    :returns: a pandas panel
-    """
-    df = get_dataframe(indicators, country, data_date, convert_date,
-                       keep_levels=True)
-    if items == major_axis:
-        raise ValueError("Cannot have the same value for items and major_axis")
-    if items not in ("indicators", "countries", "dates"):
-        raise ValueError("Bad value for items")
-    if major_axis not in ("indicators", "countries", "dates"):
-        raise ValueError("Bad value for major_axis")
-    if items == "indicators":
-        if major_axis == "dates":
-            return pd.Panel({i: df[i].unstack(level=0) for i in df.columns})
-        return pd.Panel({i: df[i].unstack() for i in df})
-    if items == "countries":
-        if major_axis == "dates":
-            return pd.Panel({i: df.xs(i, level=0) for i in
-                             sorted(set(df.index.get_level_values(0)))})
-        return pd.Panel({i: df.xs(i, level=0).transpose() for i in
-                         sorted(set(df.index.get_level_values(0)))})
-    if major_axis == "countries":
-        return pd.Panel({i: df.xs(i, level=1) for i in
-                         sorted(set(df.index.get_level_values(1)))})
-    return pd.Panel({i: df.xs(i, level=1).transpose() for i in
-                     sorted(set(df.index.get_level_values(1)))})
+    serieses = [
+        (
+            get_series(
+                indicator=indicator,
+                country=country,
+                data_date=data_date,
+                freq=freq,
+                source=source,
+                convert_date=convert_date,
+                keep_levels=keep_levels,
+                cache=cache,
+            ).rename(name)
+        )
+        for indicator, name in indicators.items()
+    ]
+    result = None
+    for series in serieses:
+        if result is None:
+            result = series.to_frame()
+        else:
+            result = result.join(series.to_frame(), how="outer")
+    result = WBDataFrame(result)
+    result.last_updated = {i.name: i.last_updated for i in serieses}
+    return result
