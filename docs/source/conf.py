@@ -24,7 +24,7 @@ copyright = "2012-2020, Oliver Sherouse"
 author = "Oliver Sherouse"
 
 # The full version, including alpha/beta/rc tags
-release = "0.3.0.dev"
+release = "0.3.0"
 
 
 # -- General configuration ---------------------------------------------------
