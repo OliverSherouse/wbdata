@@ -3,8 +3,10 @@ on:
   release:
     branches:
       - master
+    types:
+      - publish
 jobs:
-  test:
+  publish:
     name: Publish
     runs-on: ubuntu-latest
     steps:

@@ -2,6 +2,7 @@ version: 2
 formats: all
 python:
   install:
-    - path: .
+    - method: pip
+      path: .
       extra_requirements:
         - docs
