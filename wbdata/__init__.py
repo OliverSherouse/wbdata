@@ -1,7 +1,7 @@
 """
 wbdata: A wrapper for the World Bank API
 """
-__version__ = "0.3.0"
+__version__ = "0.3.0.post"
 
 from .api import (  # noqa: F401
     get_country,

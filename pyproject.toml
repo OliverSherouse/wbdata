@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "wbdata"
-version = "0.3.0.dev"
+version = "0.3.0.post"
 description = "A library to access World Bank data"
 authors = ["Oliver Sherouse <oliver@oliversherouse.com>"]
 license = "GPL-2.0+"
