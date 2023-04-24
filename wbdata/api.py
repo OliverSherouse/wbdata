@@ -2,7 +2,7 @@
 wbdata.api: Where all the functions go
 """
 
-import collections
+import collections.abc as collections
 import datetime
 import re
 import warnings
