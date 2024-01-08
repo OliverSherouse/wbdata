@@ -1,0 +1,15 @@
+site_name: WBData
+theme: readthedocs
+plugins:
+  - mkdocstrings:
+      default_handler: python
+      handlers:
+        python:
+          options:
+            show_source: false
+            members_order: source
+            docstrings_options:
+              returns_named_value: false
+              returns_multiple_items: false
+watch:
+  - wbdata
