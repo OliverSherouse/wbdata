@@ -36,3 +36,5 @@ nosetests.xml
 
 # Docs
 docs/_build/
+
+.mypy_cache

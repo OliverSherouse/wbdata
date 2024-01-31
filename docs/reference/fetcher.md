@@ -1,0 +1,3 @@
+# Fetcher Module
+
+::: wbdata.fetcher

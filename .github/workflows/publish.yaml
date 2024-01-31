@@ -11,11 +11,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v1
+        uses: actions/checkout@v4
       - name: Setup Python
-        uses: actions/setup-python@v1.1.1
+        uses: actions/setup-python@v5
       - name: Install Poetry
-        uses: dschep/install-poetry-action@v1.2
+        uses: snok/install-poetry@v1.3.4
       - name: Publish
         env:
           POETRY_PYPI_TOKEN_PYPI: ${{ secrets.pypi_token }}
