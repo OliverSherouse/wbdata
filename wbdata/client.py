@@ -512,8 +512,8 @@ class Client:
 
         Parameters:
             indicators: An dictionary where the keys are desired indicators and the
-                values are the desired column names country: a country code,
-                sequence of country codes, or "all" (default)
+                values are the desired column names 
+            country: a country code, sequence of country codes, or "all" (default)
             date: the desired date as a string, datetime object or a 2-tuple
                 with start and end dates
             freq: the desired periodicity of the data, one of 'Y' (yearly), 'M'
