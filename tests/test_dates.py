@@ -122,7 +122,25 @@ def test_parse_and_format_date():
             "2020Q1:2021Q4",
             id="two strings",
         ),
+        pytest.param(
+            ["2020M01", "2021M12"],
+            "Q",
+            "2020Q1:2021Q4",
+            id="two strings in a list",
+        ),
     ],
 )
 def test_format_dates(dates_, freq, expected):
     assert dates.format_dates(dates_, freq) == expected
+
+
+@pytest.mark.parametrize(
+    ["dates_"],
+    (
+        (1234,),
+        (["Why", "Hello", "There"],),
+    ),
+)
+def test_bad_dates(dates_):
+    with pytest.raises(ValueError, match="dates argument"):
+        dates.format_dates(dates_, "Y")
