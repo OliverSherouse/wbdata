@@ -12,7 +12,7 @@ import appdirs
 import cachetools
 import shelved_cache  # type: ignore[import-untyped]
 
-from wbdata import __version__
+from .version import __version__
 
 log = logging.getLogger(__name__)
 
