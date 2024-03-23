@@ -70,6 +70,11 @@ select = [
 ]
 ignore-init-module-imports = true
 
+[tool.ruff.lint.extend-per-file-ignores]
+"__init__.py" = ["F401"]
+
+
+
 [tool.pytest.ini_options]
 minversion = "6.0"
 addopts = "--cov=wbdata"

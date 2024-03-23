@@ -2,9 +2,8 @@
 wbdata: A wrapper for the World Bank API
 """
 
-__version__ = "1.0.0"
-
 from .client import Client
+from .version import __version__
 
 
 def get_default_client() -> Client:
