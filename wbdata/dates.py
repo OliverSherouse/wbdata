@@ -114,9 +114,14 @@ def format_dates(dates: Dates, freq: str) -> str:
         A string representing a date or date range according to the specified
         frequency in the form the World Bank API expects.
     """
-    if isinstance(dates, tuple):
+    if isinstance(dates, (str, dt.datetime)):
+        return _parse_and_format_date(dates, freq)
+    if isinstance(dates, Sequence) and len(dates) == 2:
         return (
             f"{_parse_and_format_date(dates[0], freq)}"
             f":{_parse_and_format_date(dates[1], freq)}"
         )
-    return _parse_and_format_date(dates, freq)
+    raise ValueError(
+        "dates argument must be a string, datetime object, or 2-tuple of"
+        " strings or datetime objects."
+    )
