@@ -2,11 +2,11 @@
 Caching functionality
 
 """
+
 import datetime as dt
 import logging
 import os
 from pathlib import Path
-from typing import Union
 
 import appdirs
 import cachetools
@@ -37,10 +37,10 @@ except ValueError:
 
 
 def get_cache(
-    path: Union[str, Path, None] = None,
-    ttl_days: Union[int, None] = None,
-    max_size: Union[int, None] = None,
-) -> cachetools.Cache:
+    path: str | Path | None = None,
+    ttl_days: int | None = None,
+    max_size: int | None = None,
+) -> shelved_cache.PersistentCache:
     """
     Create a persistent cache.
 
@@ -69,7 +69,7 @@ def get_cache(
     Path(path).parent.mkdir(parents=True, exist_ok=True)
     ttl_days = ttl_days or TTL_DAYS
     max_size = max_size or MAX_SIZE
-    cache: cachetools.TTLCache = shelved_cache.PersistentCache(
+    cache = shelved_cache.PersistentCache(
         cachetools.TTLCache,
         filename=str(path),
         maxsize=max_size,

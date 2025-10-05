@@ -8,7 +8,8 @@ import datetime as dt
 import json
 import logging
 import pprint
-from typing import Any, Dict, List, MutableMapping, NamedTuple, Tuple, Union
+from collections.abc import MutableMapping
+from typing import Any, NamedTuple
 
 import backoff
 import requests
@@ -17,19 +18,19 @@ PER_PAGE = 1000
 TRIES = 3
 
 
-def _strip_id(row: Dict[str, Any]) -> None:
+def _strip_id(row: dict[str, Any]) -> None:
     with contextlib.suppress(KeyError):
         row["id"] = row["id"].strip()  # type: ignore[union-attr]
 
 
-Response = Tuple[Dict[str, Any], List[Dict[str, Any]]]
+Response = tuple[dict[str, Any], list[dict[str, Any]]]
 
 
 class ParsedResponse(NamedTuple):
-    rows: List[Dict[str, Any]]
+    rows: list[dict[str, Any]]
     page: int
     pages: int
-    last_updated: Union[str, None]
+    last_updated: str | None
 
     @classmethod
     def from_response(cls, response: Response) -> "ParsedResponse":
@@ -44,8 +45,7 @@ class ParsedResponse(NamedTuple):
             try:
                 message = response[0]["message"][0]
                 raise RuntimeError(
-                    f"Got error {message['id']} ({message['key']}): "
-                    f"{message['value']}"
+                    f"Got error {message['id']} ({message['key']}): {message['value']}"
                 ) from e
             except (IndexError, KeyError) as e:
                 raise RuntimeError(
@@ -53,16 +53,16 @@ class ParsedResponse(NamedTuple):
                 ) from e
 
 
-CacheKey = Tuple[str, Tuple[Tuple[str, Any], ...]]
+CacheKey = tuple[str, tuple[tuple[str, Any], ...]]
 
 
-class Result(List[Dict[str, Any]]):
+class Result(list[dict[str, Any]]):
     """
     List with a `last_updated` attribute. The `last_updated` attribute is either
     a datetime.datetime object or None.
     """
 
-    def __init__(self, *args, last_updated: Union[dt.datetime, None] = None, **kwargs):
+    def __init__(self, *args, last_updated: dt.datetime | None = None, **kwargs):
         super().__init__(*args, **kwargs)
         self.last_updated = last_updated
 
@@ -83,13 +83,13 @@ class Fetcher:
 
     @backoff.on_exception(
         wait_gen=backoff.expo,
-        exception=requests.exceptions.ConnectTimeout,
+        exception=requests.ConnectTimeout,
         max_tries=TRIES,
     )
     def _get_response_body(
         self,
         url: str,
-        params: Dict[str, Any],
+        params: dict[str, Any],
     ) -> str:
         """
         Fetch a url directly from the World Bank
@@ -107,7 +107,7 @@ class Fetcher:
     def _get_response(
         self,
         url: str,
-        params: Dict[str, Any],
+        params: dict[str, Any],
         skip_cache=False,
     ) -> ParsedResponse:
         """
@@ -131,7 +131,7 @@ class Fetcher:
     def fetch(
         self,
         url: str,
-        params: Union[Dict[str, Any], None] = None,
+        params: dict[str, Any] | None = None,
         skip_cache: bool = False,
     ) -> Result:
         """Fetch data from the World Bank API or from cache.
@@ -150,7 +150,7 @@ class Fetcher:
         params["format"] = "json"
         params["per_page"] = PER_PAGE
         page, pages = -1, -2
-        rows: List[Dict[str, Any]] = []
+        rows: list[dict[str, Any]] = []
         while pages != page:
             response = self._get_response(
                 url=url,

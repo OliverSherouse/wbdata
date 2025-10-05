@@ -1,9 +1,11 @@
 """
 Miscellaneous data utilities
 """
+
 import datetime as dt
 import re
-from typing import Any, Dict, Sequence, Tuple, Union
+from collections.abc import Sequence
+from typing import Any
 
 import dateparser
 
@@ -11,8 +13,8 @@ PATTERN_YEAR = re.compile(r"\d{4}")
 PATTERN_MONTH = re.compile(r"\d{4}M\d{1,2}")
 PATTERN_QUARTER = re.compile(r"\d{4}Q\d{1,2}")
 
-Date = Union[str, dt.datetime]
-Dates = Union[Date, Tuple[Date, Date]]
+Date = str | dt.datetime
+Dates = Date | tuple[Date, Date]
 
 
 def _parse_year(datestr: str) -> dt.datetime:
@@ -37,7 +39,7 @@ def _parse_quarter(datestr: str) -> dt.datetime:
     return dt.datetime(int(split[0]), month, 1)
 
 
-def parse_row_dates(data: Sequence[Dict[str, Any]]) -> None:
+def parse_row_dates(data: Sequence[dict[str, Any]]) -> None:
     """
     Replace date strings in raw response with datetime objects, in-place.
 
@@ -114,9 +116,14 @@ def format_dates(dates: Dates, freq: str) -> str:
         A string representing a date or date range according to the specified
         frequency in the form the World Bank API expects.
     """
-    if isinstance(dates, tuple):
+    if isinstance(dates, (str, dt.datetime)):
+        return _parse_and_format_date(dates, freq)
+    if isinstance(dates, Sequence) and len(dates) == 2:
         return (
             f"{_parse_and_format_date(dates[0], freq)}"
             f":{_parse_and_format_date(dates[1], freq)}"
         )
-    return _parse_and_format_date(dates, freq)
+    raise ValueError(
+        "dates argument must be a string, datetime object, or 2-tuple of"
+        " strings or datetime objects."
+    )
