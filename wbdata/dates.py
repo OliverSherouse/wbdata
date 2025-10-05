@@ -3,7 +3,8 @@ Miscellaneous data utilities
 """
 import datetime as dt
 import re
-from typing import Any, Dict, Sequence, Tuple, Union
+from collections.abc import Sequence
+from typing import Any, Union
 
 import dateparser
 
@@ -12,7 +13,7 @@ PATTERN_MONTH = re.compile(r"\d{4}M\d{1,2}")
 PATTERN_QUARTER = re.compile(r"\d{4}Q\d{1,2}")
 
 Date = Union[str, dt.datetime]
-Dates = Union[Date, Tuple[Date, Date]]
+Dates = Union[Date, tuple[Date, Date]]
 
 
 def _parse_year(datestr: str) -> dt.datetime:
@@ -37,7 +38,7 @@ def _parse_quarter(datestr: str) -> dt.datetime:
     return dt.datetime(int(split[0]), month, 1)
 
 
-def parse_row_dates(data: Sequence[Dict[str, Any]]) -> None:
+def parse_row_dates(data: Sequence[dict[str, Any]]) -> None:
     """
     Replace date strings in raw response with datetime objects, in-place.
 

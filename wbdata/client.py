@@ -6,8 +6,9 @@ import contextlib
 import dataclasses
 import datetime as dt
 import re
+from collections.abc import Generator, Iterable, Sequence
 from pathlib import Path
-from typing import Any, Dict, Generator, Iterable, List, Sequence, Tuple, Union
+from typing import Any, Union
 
 import decorator
 import requests
@@ -30,7 +31,7 @@ SOURCE_URL = f"{BASE_URL}/sources"
 TOPIC_URL = f"{BASE_URL}/topics"
 
 
-class SearchResult(List):
+class SearchResult(list):
     """
     A list that prints out a user-friendly table when printed or returned on the
     command line
@@ -84,7 +85,7 @@ if pd:
 
     class DataFrame(pd.DataFrame):
         def __init__(
-            self, *args, serieses: Union[Dict[str, Series], None] = None, **kwargs
+            self, *args, serieses: Union[dict[str, Series], None] = None, **kwargs
         ):
             """
             A `pandas.DataFrame` with a `last_updated` attribute
@@ -96,7 +97,7 @@ if pd:
             """
             if serieses:
                 super().__init__(serieses)
-                self.last_updated: Union[Dict[str, Union[dt.datetime, None]], None] = {
+                self.last_updated: Union[dict[str, Union[dt.datetime, None]], None] = {
                     name: s.last_updated for name, s in serieses.items()
                 }
             else:
@@ -140,8 +141,8 @@ def _cast_float(value: str) -> Union[float, None]:
 
 
 def _filter_by_pattern(
-    rows: Iterable[Dict[str, Any]], pattern=Union[str, re.Pattern]
-) -> Generator[Dict[str, Any], None, None]:
+    rows: Iterable[dict[str, Any]], pattern=Union[str, re.Pattern]
+) -> Generator[dict[str, Any], None, None]:
     """Return a generator of rows matching the pattern"""
     if isinstance(pattern, str):
         pattern = re.compile(pattern, re.IGNORECASE)
@@ -186,7 +187,7 @@ class Client:
         date: Union[
             str,
             dt.datetime,
-            Tuple[Union[str, dt.datetime], Union[str, dt.datetime]],
+            tuple[Union[str, dt.datetime], Union[str, dt.datetime]],
             None,
         ] = None,
         freq: str = "Y",
@@ -220,7 +221,7 @@ class Client:
         except TypeError as e:
             raise TypeError("'country' must be a string or iterable'") from e
         url = "/".join((url, c_part, "indicators", indicator))
-        params: Dict[str, Any] = {}
+        params: dict[str, Any] = {}
         if date:
             params["date"] = dates.format_dates(date, freq)
         if source:
@@ -423,7 +424,7 @@ class Client:
         date: Union[
             str,
             dt.datetime,
-            Tuple[Union[str, dt.datetime], Union[str, dt.datetime]],
+            tuple[Union[str, dt.datetime], Union[str, dt.datetime]],
             None,
         ] = None,
         freq: str = "Y",
@@ -491,12 +492,12 @@ class Client:
     @needs_pandas
     def get_dataframe(
         self,
-        indicators: Dict[str, str],
+        indicators: dict[str, str],
         country: Union[str, Sequence[str]] = "all",
         date: Union[
             str,
             dt.datetime,
-            Tuple[Union[str, dt.datetime], Union[str, dt.datetime]],
+            tuple[Union[str, dt.datetime], Union[str, dt.datetime]],
             None,
         ] = None,
         freq: str = "Y",

@@ -33,7 +33,6 @@ mkdocs = {version = "^1.5.3", optional=true}
 mkdocstrings = {extras = ["python"], version = "^0.24.0", optional=true}
 
 [tool.poetry.group.dev.dependencies]
-ruff = "^0.1.11"
 ipython = "<8"
 
 [tool.poetry.group.tests.dependencies]
@@ -68,7 +67,6 @@ select = [
     # isort
     "I",
 ]
-ignore-init-module-imports = true
 
 [tool.ruff.lint.extend-per-file-ignores]
 "__init__.py" = ["F401"]
