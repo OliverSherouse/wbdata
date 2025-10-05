@@ -8,7 +8,7 @@ import datetime as dt
 import re
 from collections.abc import Generator, Iterable, Sequence
 from pathlib import Path
-from typing import Any, Union
+from typing import Any
 
 import decorator
 import requests
@@ -17,7 +17,7 @@ import tabulate
 try:
     import pandas as pd  # type: ignore[import-untyped]
 except ImportError:
-    pd = None
+    pd = None  # type: ignore[assignment]
 
 
 from . import cache, dates, fetcher
@@ -71,7 +71,7 @@ if pd:
         def __init__(
             self,
             *args,
-            last_updated: Union[None, dt.datetime] = None,
+            last_updated: None | dt.datetime = None,
             **kwargs,
         ):
             super().__init__(*args, **kwargs)
@@ -84,9 +84,7 @@ if pd:
             return Series
 
     class DataFrame(pd.DataFrame):
-        def __init__(
-            self, *args, serieses: Union[dict[str, Series], None] = None, **kwargs
-        ):
+        def __init__(self, *args, serieses: dict[str, Series] | None = None, **kwargs):
             """
             A `pandas.DataFrame` with a `last_updated` attribute
 
@@ -97,7 +95,7 @@ if pd:
             """
             if serieses:
                 super().__init__(serieses)
-                self.last_updated: Union[dict[str, Union[dt.datetime, None]], None] = {
+                self.last_updated: dict[str, dt.datetime | None] | None = {
                     name: s.last_updated for name, s in serieses.items()
                 }
             else:
@@ -133,7 +131,7 @@ def _parse_value_or_iterable(arg: Any) -> str:
     return str(arg)
 
 
-def _cast_float(value: str) -> Union[float, None]:
+def _cast_float(value: str) -> float | None:
     """Return a value coerced to float or None"""
     with contextlib.suppress(ValueError, TypeError):
         return float(value)
@@ -141,11 +139,12 @@ def _cast_float(value: str) -> Union[float, None]:
 
 
 def _filter_by_pattern(
-    rows: Iterable[dict[str, Any]], pattern=Union[str, re.Pattern]
+    rows: Iterable[dict[str, Any]], pattern=str | re.Pattern
 ) -> Generator[dict[str, Any], None, None]:
     """Return a generator of rows matching the pattern"""
     if isinstance(pattern, str):
         pattern = re.compile(pattern, re.IGNORECASE)
+    assert isinstance(pattern, re.Pattern)
     return (row for row in rows if pattern.search(row["name"]))
 
 
@@ -165,10 +164,10 @@ class Client:
         session: requests Session object to use to make requests
     """
 
-    cache_path: Union[str, Path, None] = None
-    cache_ttl_days: Union[int, None] = None
-    cache_max_size: Union[int, None] = None
-    session: Union[requests.Session, None] = None
+    cache_path: str | Path | None = None
+    cache_ttl_days: int | None = None
+    cache_max_size: int | None = None
+    session: requests.Session | None = None
 
     def __post_init__(self):
         self.fetcher = fetcher.Fetcher(
@@ -183,15 +182,13 @@ class Client:
     def get_data(
         self,
         indicator: str,
-        country: Union[str, Sequence[str]] = "all",
-        date: Union[
-            str,
-            dt.datetime,
-            tuple[Union[str, dt.datetime], Union[str, dt.datetime]],
-            None,
-        ] = None,
+        country: str | Sequence[str] = "all",
+        date: str
+        | dt.datetime
+        | tuple[str | dt.datetime, str | dt.datetime]
+        | None = None,
         freq: str = "Y",
-        source: Union[int, str, Sequence[Union[int, str]], None] = None,
+        source: int | str | Sequence[int | str] | None = None,
         parse_dates: bool = False,
         skip_cache: bool = False,
     ) -> fetcher.Result:
@@ -249,7 +246,7 @@ class Client:
 
     def get_sources(
         self,
-        source_id: Union[int, str, Sequence[Union[int, str]], None] = None,
+        source_id: int | str | Sequence[int | str] | None = None,
         skip_cache: bool = False,
     ) -> SearchResult:
         """
@@ -266,7 +263,7 @@ class Client:
 
     def get_incomelevels(
         self,
-        level_id: Union[int, str, Sequence[Union[int, str]], None] = None,
+        level_id: int | str | Sequence[int | str] | None = None,
         skip_cache: bool = False,
     ) -> SearchResult:
         """
@@ -285,7 +282,7 @@ class Client:
 
     def get_topics(
         self,
-        topic_id: Union[int, str, Sequence[Union[int, str]], None] = None,
+        topic_id: int | str | Sequence[int | str] | None = None,
         skip_cache: bool = False,
     ) -> SearchResult:
         """
@@ -303,7 +300,7 @@ class Client:
 
     def get_lendingtypes(
         self,
-        type_id: Union[int, str, Sequence[Union[int, str]], None] = None,
+        type_id: int | str | Sequence[int | str] | None = None,
         skip_cache: bool = False,
     ) -> SearchResult:
         """
@@ -321,10 +318,10 @@ class Client:
 
     def get_countries(
         self,
-        country_id: Union[str, Sequence[str], None] = None,
-        query: Union[str, re.Pattern, None] = None,
-        incomelevel: Union[int, str, Sequence[Union[int, str]], None] = None,
-        lendingtype: Union[int, str, Sequence[Union[int, str]], None] = None,
+        country_id: str | Sequence[str] | None = None,
+        query: str | re.Pattern | None = None,
+        incomelevel: int | str | Sequence[int | str] | None = None,
+        lendingtype: int | str | Sequence[int | str] | None = None,
         skip_cache: bool = False,
     ) -> SearchResult:
         """
@@ -368,10 +365,10 @@ class Client:
 
     def get_indicators(
         self,
-        indicator: Union[str, Sequence[str], None] = None,
-        query: Union[str, re.Pattern, None] = None,
-        source: Union[str, int, Sequence[Union[str, int]], None] = None,
-        topic: Union[str, int, Sequence[Union[str, int]], None] = None,
+        indicator: str | Sequence[str] | None = None,
+        query: str | re.Pattern | None = None,
+        source: str | int | Sequence[str | int] | None = None,
+        topic: str | int | Sequence[str | int] | None = None,
         skip_cache: bool = False,
     ) -> SearchResult:
         """
@@ -420,15 +417,13 @@ class Client:
     def get_series(
         self,
         indicator: str,
-        country: Union[str, Sequence[str]] = "all",
-        date: Union[
-            str,
-            dt.datetime,
-            tuple[Union[str, dt.datetime], Union[str, dt.datetime]],
-            None,
-        ] = None,
+        country: str | Sequence[str] = "all",
+        date: str
+        | dt.datetime
+        | tuple[str | dt.datetime, str | dt.datetime]
+        | None = None,
         freq: str = "Y",
-        source: Union[int, str, Sequence[Union[int, str]], None] = None,
+        source: int | str | Sequence[int | str] | None = None,
         parse_dates: bool = False,
         name: str = "value",
         keep_levels: bool = False,
@@ -493,15 +488,13 @@ class Client:
     def get_dataframe(
         self,
         indicators: dict[str, str],
-        country: Union[str, Sequence[str]] = "all",
-        date: Union[
-            str,
-            dt.datetime,
-            tuple[Union[str, dt.datetime], Union[str, dt.datetime]],
-            None,
-        ] = None,
+        country: str | Sequence[str] = "all",
+        date: str
+        | dt.datetime
+        | tuple[str | dt.datetime, str | dt.datetime]
+        | None = None,
         freq: str = "Y",
-        source: Union[int, str, Sequence[Union[int, str]], None] = None,
+        source: int | str | Sequence[int | str] | None = None,
         parse_dates: bool = False,
         keep_levels: bool = False,
         skip_cache: bool = False,
@@ -513,7 +506,7 @@ class Client:
 
         Parameters:
             indicators: An dictionary where the keys are desired indicators and the
-                values are the desired column names 
+                values are the desired column names
             country: a country code, sequence of country codes, or "all" (default)
             date: the desired date as a string, datetime object or a 2-tuple
                 with start and end dates

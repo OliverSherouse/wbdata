@@ -189,7 +189,7 @@ def test_fetch(url, params, responses, expected, mock_fetcher):
 
     assert got == expected
     assert expected_params == got_params
-    for response, rparams in zip(responses, expected_params):
+    for response, rparams in zip(responses, expected_params, strict=True):
         assert mock_fetcher.cache[url, tuple(sorted(rparams.items()))] == json.dumps(
             response
         )

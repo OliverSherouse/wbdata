@@ -9,7 +9,7 @@ import json
 import logging
 import pprint
 from collections.abc import MutableMapping
-from typing import Any, NamedTuple, Union
+from typing import Any, NamedTuple
 
 import backoff
 import requests
@@ -30,7 +30,7 @@ class ParsedResponse(NamedTuple):
     rows: list[dict[str, Any]]
     page: int
     pages: int
-    last_updated: Union[str, None]
+    last_updated: str | None
 
     @classmethod
     def from_response(cls, response: Response) -> "ParsedResponse":
@@ -45,8 +45,7 @@ class ParsedResponse(NamedTuple):
             try:
                 message = response[0]["message"][0]
                 raise RuntimeError(
-                    f"Got error {message['id']} ({message['key']}): "
-                    f"{message['value']}"
+                    f"Got error {message['id']} ({message['key']}): {message['value']}"
                 ) from e
             except (IndexError, KeyError) as e:
                 raise RuntimeError(
@@ -63,7 +62,7 @@ class Result(list[dict[str, Any]]):
     a datetime.datetime object or None.
     """
 
-    def __init__(self, *args, last_updated: Union[dt.datetime, None] = None, **kwargs):
+    def __init__(self, *args, last_updated: dt.datetime | None = None, **kwargs):
         super().__init__(*args, **kwargs)
         self.last_updated = last_updated
 
@@ -84,7 +83,7 @@ class Fetcher:
 
     @backoff.on_exception(
         wait_gen=backoff.expo,
-        exception=requests.exceptions.ConnectTimeout,
+        exception=requests.ConnectTimeout,
         max_tries=TRIES,
     )
     def _get_response_body(
@@ -132,7 +131,7 @@ class Fetcher:
     def fetch(
         self,
         url: str,
-        params: Union[dict[str, Any], None] = None,
+        params: dict[str, Any] | None = None,
         skip_cache: bool = False,
     ) -> Result:
         """Fetch data from the World Bank API or from cache.

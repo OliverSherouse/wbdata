@@ -1,10 +1,11 @@
 """
 Miscellaneous data utilities
 """
+
 import datetime as dt
 import re
 from collections.abc import Sequence
-from typing import Any, Union
+from typing import Any
 
 import dateparser
 
@@ -12,8 +13,8 @@ PATTERN_YEAR = re.compile(r"\d{4}")
 PATTERN_MONTH = re.compile(r"\d{4}M\d{1,2}")
 PATTERN_QUARTER = re.compile(r"\d{4}Q\d{1,2}")
 
-Date = Union[str, dt.datetime]
-Dates = Union[Date, tuple[Date, Date]]
+Date = str | dt.datetime
+Dates = Date | tuple[Date, Date]
 
 
 def _parse_year(datestr: str) -> dt.datetime:
