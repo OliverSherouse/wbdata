@@ -2,10 +2,13 @@
 wbdata: A wrapper for the World Bank API
 """
 
+from functools import lru_cache
+
 from .client import Client
 from .version import __version__
 
 
+@lru_cache(maxsize=1)
 def get_default_client() -> Client:
     """
     Get the default client
