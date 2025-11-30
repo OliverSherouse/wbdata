@@ -8,7 +8,7 @@ import datetime as dt
 import re
 from collections.abc import Generator, Iterable, Sequence
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import decorator
 import requests
@@ -471,11 +471,18 @@ class Client:
             parse_dates=parse_dates,
             skip_cache=skip_cache,
         )
-        df = pd.DataFrame(
-            [[i["country"]["value"], i["date"], i["value"]] for i in raw_data],
-            columns=["country", "date", name],
+        rows = cast(
+            list[tuple[str, str, float | None]],
+            [
+                (
+                    str(i["country"]["value"]),
+                    str(i["date"]),
+                    _cast_float(i["value"]),
+                )
+                for i in raw_data
+            ],
         )
-        df[name] = df[name].map(_cast_float)
+        df = pd.DataFrame.from_records(rows, columns=["country", "date", name])
         if not keep_levels and len(df["country"].unique()) == 1:
             df = df.set_index("date")
         elif not keep_levels and len(df["date"].unique()) == 1:

@@ -1,19 +1,33 @@
 # Repository Guidelines
 
-## Project Structure & Module Organization
-Source lives in `wbdata/` with clients, caching helpers, and API utilities; `wbdata/version.py` centralizes the library version and should be the single source when updating releases. Tests reside in `tests/` with `test_*.py` modules mirroring public APIs. Contributor-facing docs and MkDocs content sit in `docs/`, while packaging metadata and tooling configuration are in `pyproject.toml`.
+## Quickstart
+- Run `make setup` to install all extras and dev tools.
+- Run `make check` to execute format (check), lint, ty check, and tests.
+- Open pull requests against `master`.
+- Do not commit or push unless explicitly instructed.
 
-## Build, Test, and Development Commands
-Install dependencies with `uv sync --all-extras --group dev` so the docs, pandas extras, and developer tooling are available. Use `uv run pytest` for the default suite and coverage, matching the `--cov=wbdata` addopts in configuration. Run `uv run ruff check wbdata tests` to lint, and `uv run mypy wbdata` for type validation. During documentation work, serve the site locally via `uv run mkdocs serve`.
+## Dev Loop
+- Run `make format` (ruff format).
+- Run `make lint` (ruff check wbdata tests).
+- Run `make typecheck` (ty check wbdata).
+- Run `make test` (pytest with coverage addopts from config).
+- Preview docs with `uv run mkdocs serve`.
 
-## Coding Style & Naming Conventions
-Follow standard Python formatting with four-space indentation and readable, snake_case symbols. Public APIs exposed in `wbdata/__init__.py` should maintain descriptive, lowercase names; classes stay in CapWords. Ruff enforces PEP 8, import sorting, and selected Bugbear/Simplify rules—run it before committing. Keep modules typed, updating `py.typed` coverage when adding packages, and prefer explicit re-exports in `__all__` blocks where applicable.
+## Project Layout
+- Keep code in `wbdata/` (client, caching, API helpers); treat `wbdata/version.py` as the single source of version.
+- Add tests in `tests/` with `test_*.py` mirroring public APIs.
+- Maintain docs in `docs/` and `mkdocs.yml`; adjust packaging/tooling in `pyproject.toml`.
 
-## Testing Guidelines
-Write new tests under `tests/` using `pytest` conventions (`test_feature.py`, functions starting with `test_`). When adding network-heavy scenarios, leverage fixtures to isolate HTTP calls. Keep coverage from `pytest-cov` stable by exercising new branches, and include regression cases that mirror reported issues.
+## Style
+- Use Python 4-space indent, snake_case; CapWords for classes; re-export via `__all__` when needed.
+- Run ruff (PEP8, imports, Bugbear/Simplify) before commits.
+- Preserve typing coverage (`py.typed`); prefer explicit types.
 
-## Commit & Pull Request Guidelines
-Aim for concise, imperative subjects, optionally prefixed with Conventional Commit types as seen in `git log` (e.g., `fix: improve caching`). Reference related issues or discussions with `(#123)` in the subject when merging via GitHub. Before opening a PR, ensure lint, typing, and tests pass, document user-facing changes, and provide a short summary plus reproduction or screenshots when behavior shifts.
+## Testing
+- Add pytest cases under `tests/`; favor fixtures for network isolation.
+- Maintain coverage by exercising new branches; include regression cases for reported bugs.
 
-## Documentation & Release Notes
-Update `docs/` pages when modifying user workflows, and verify the navigation using the MkDocs preview. Release metadata lives in `wbdata/version.py`; bump it in sync with changelog entries and confirm that packaging files (`pyproject.toml`, `MANIFEST.in`) need no extra updates.
+## PR Expectations
+- Use conventional, imperative titles (e.g., `fix: improve caching`).
+- Ensure format/lint/type/tests pass; document user-facing changes; include repro or screenshots when behavior shifts.
+- Bump `wbdata/version.py` alongside changelog/release notes when shipping releases.
