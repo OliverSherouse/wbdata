@@ -4,6 +4,7 @@ Caching functionality
 """
 
 import datetime as dt
+import glob
 import logging
 import os
 from pathlib import Path
@@ -15,6 +16,23 @@ import shelved_cache  # type: ignore[import-untyped]
 from .version import __version__
 
 log = logging.getLogger(__name__)
+
+
+def _remove_cache_files(path: str | Path) -> None:
+    """Remove all files associated with a shelve cache.
+
+    Shelve databases can create files with various extensions depending on
+    the underlying dbm implementation (.db, .dir, .bak, .dat, etc.).
+    """
+    path_str = str(path)
+    # Remove files with extensions that shelve might create
+    for pattern in [f"{path_str}", f"{path_str}.*"]:
+        for filepath in glob.glob(pattern):
+            try:
+                os.remove(filepath)
+                log.debug(f"Removed corrupted cache file: {filepath}")
+            except OSError as e:
+                log.warning(f"Failed to remove cache file {filepath}: {e}")
 
 CACHE_PATH = os.getenv(
     "WBDATA_CACHE_PATH",
@@ -69,12 +87,26 @@ def get_cache(
     Path(path).parent.mkdir(parents=True, exist_ok=True)
     ttl_days = ttl_days or TTL_DAYS
     max_size = max_size or MAX_SIZE
-    cache = shelved_cache.PersistentCache(
-        cachetools.TTLCache,
-        filename=str(path),
-        maxsize=max_size,
-        ttl=dt.timedelta(days=ttl_days),
-        timer=dt.datetime.now,
-    )
-    cache.expire()
+
+    def _create_cache() -> shelved_cache.PersistentCache:
+        return shelved_cache.PersistentCache(
+            cachetools.TTLCache,
+            filename=str(path),
+            maxsize=max_size,
+            ttl=dt.timedelta(days=ttl_days),
+            timer=dt.datetime.now,
+        )
+
+    cache = _create_cache()
+    try:
+        cache.expire()
+    except SystemError:
+        # Cache file is corrupted, remove it and create a new one
+        log.warning(
+            f"Cache at {path} appears to be corrupted. Removing and recreating."
+        )
+        cache.close()
+        _remove_cache_files(path)
+        cache = _create_cache()
+        cache.expire()
     return cache
