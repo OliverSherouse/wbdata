@@ -6,6 +6,8 @@ Caching functionality
 import datetime as dt
 import logging
 import os
+import pickle
+import shutil
 from pathlib import Path
 
 import appdirs
@@ -65,16 +67,49 @@ def get_cache(
             `WBDATA_CACHE_MAX_SIZE`.
 
     """
-    path = path or CACHE_PATH
-    Path(path).parent.mkdir(parents=True, exist_ok=True)
+    path = Path(path or CACHE_PATH)
+    path.parent.mkdir(parents=True, exist_ok=True)
     ttl_days = ttl_days or TTL_DAYS
     max_size = max_size or MAX_SIZE
-    cache = shelved_cache.PersistentCache(
-        cachetools.TTLCache,
-        filename=str(path),
-        maxsize=max_size,
-        ttl=dt.timedelta(days=ttl_days),
-        timer=dt.datetime.now,
-    )
+
+    def _build_cache() -> shelved_cache.PersistentCache:
+        return shelved_cache.PersistentCache(
+            cachetools.TTLCache,
+            filename=str(path),
+            maxsize=max_size,
+            ttl=dt.timedelta(days=ttl_days),
+            timer=dt.datetime.now,
+        )
+
+    try:
+        cache = _build_cache()
+        cache.expire()
+        return cache
+    except (SystemError, EOFError, pickle.UnpicklingError, OSError) as exc:
+        log.warning("Cache at %s failed to load (%s); recreating", path, exc)
+        _clear_cache_files(path)
+
+    cache = _build_cache()
     cache.expire()
     return cache
+
+
+def _clear_cache_files(path: Path) -> None:
+    """Remove shelve-backed cache files derived from *path*.
+
+    Shelve implementations may create multiple files with suffixes (e.g. `.db`,
+    `.bak`, `.dat`, `.dir`). Remove the base file and any siblings sharing its
+    stem to ensure we start from a clean slate after corruption.
+    """
+
+    suffixes = (".db", ".bak", ".dat", ".dir")
+    candidates = {path}
+    candidates.update(path.parent.glob(f"{path.stem}.*"))
+    candidates.update({path.with_suffix(suffix) for suffix in suffixes})
+    for candidate in candidates:
+        try:
+            candidate.unlink()
+        except FileNotFoundError:
+            continue
+        except (IsADirectoryError, PermissionError):
+            shutil.rmtree(candidate, ignore_errors=True)
