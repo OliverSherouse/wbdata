@@ -17,7 +17,7 @@ import tabulate
 try:
     import pandas as pd  # type: ignore[import-untyped]
 except ImportError:
-    pd = None  # type: ignore[assignment]
+    pd = None  # ty: ignore[invalid-assignment]
 
 
 from . import cache, dates, fetcher
@@ -473,7 +473,7 @@ class Client:
         )
         df = pd.DataFrame(
             [[i["country"]["value"], i["date"], i["value"]] for i in raw_data],
-            columns=["country", "date", name],
+            columns=["country", "date", name],  # ty: ignore[invalid-argument-type]
         )
         df[name] = df[name].map(_cast_float)
         if not keep_levels and len(df["country"].unique()) == 1:

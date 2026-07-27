@@ -1,10 +1,10 @@
 
 [project]
 name = "wbdata"
-version = "1.1.0"
+dynamic = ["version"]
 description = "A library to access World Bank data"
 readme = "README.md"
-license = {text = "GPL-2.0+"}
+license = "GPL-2.0-or-later"
 requires-python = ">=3.10,<4"
 authors = [
     {name = "Oliver Sherouse", email = "oliver@oliversherouse.com"},
@@ -41,7 +41,9 @@ Documentation = "https://wbdata.readthedocs.io/"
 
 [dependency-groups]
 dev = [
+    "build>=1.2.2,<2",
     "pytest>=7.4.4,<8",
+    "ruff>=0.8.0",
     "pytest-cov>=4.1.0,<5",
     "types-cachetools>=5.3.0.7,<6",
     "types-tabulate>=0.9.0.20240106,<0.10",
@@ -52,8 +54,17 @@ dev = [
 ]
 
 [build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+requires = ["setuptools>=64", "setuptools-scm>=8"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["wbdata*"]
+
+[tool.setuptools.package-data]
+wbdata = ["py.typed"]
+
+[tool.setuptools_scm]
+local_scheme = "no-local-version"
 
 [tool.ruff.lint]
 select = [

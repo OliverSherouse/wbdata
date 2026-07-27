@@ -13,3 +13,5 @@ API](http://data.worldbank.org/developers/api-overview), and also adds some
 convenience functionality for searching and retrieving information.
 
 Documentation is available at <http://wbdata.readthedocs.org/> .
+
+Contributing and release conventions are described in [CONTRIBUTING.md](CONTRIBUTING.md).
