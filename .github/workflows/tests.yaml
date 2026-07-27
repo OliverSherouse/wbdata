@@ -1,13 +1,41 @@
 name: Tests
+
 on:
   push:
-    branches:
-      - "master"
+    branches: [main, master]
   pull_request:
+
+permissions:
+  contents: read
+  pull-requests: read
+
 jobs:
+  conventional-pr-title:
+    name: Conventional PR title
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate title
+        uses: amannn/action-semantic-pull-request@v5
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            build
+            chore
+            ci
+            docs
+            feat
+            fix
+            perf
+            refactor
+            revert
+            style
+            test
+
   lint:
     name: Lint
-    runs-on: "ubuntu-latest"
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -17,11 +45,16 @@ jobs:
           python-version: "3.10"
       - name: Install uv
         uses: astral-sh/setup-uv@v6
-      - name: Run Lint
-        run: uv tool run ruff check
+        with:
+          enable-cache: true
+      - name: Install dependencies
+        run: uv sync --all-extras --group dev
+      - name: Run lint
+        run: uv run ruff check wbdata tests
+
   types:
     name: Types
-    runs-on: "ubuntu-latest"
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -31,30 +64,38 @@ jobs:
           python-version: "3.10"
       - name: Install uv
         uses: astral-sh/setup-uv@v6
-      - name: Install Dependencies
-        run: uv sync --all-extras
-      - name: Check Types
+        with:
+          enable-cache: true
+      - name: Install dependencies
+        run: uv sync --all-extras --group dev
+      - name: Check types
         run: uv tool run ty check
+
   test:
     name: Tests
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         python-version: ["3.10", "3.11", "3.12", "3.13"]
-        os: ["ubuntu-latest", "macos-latest", "windows-latest"]
+        os: [ubuntu-latest, macos-latest, windows-latest]
     defaults:
       run:
         shell: bash
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install uv
         uses: astral-sh/setup-uv@v6
-      - name: Install Dependencies
-        run: uv sync --all-extras
-      - name: Run Tests
+        with:
+          enable-cache: true
+      - name: Install dependencies
+        run: uv sync --all-extras --group dev
+      - name: Run tests
         run: uv run pytest

@@ -12,15 +12,15 @@ import appdirs
 import cachetools
 import shelved_cache  # type: ignore[import-untyped]
 
-from .version import __version__
+from ._metadata import get_version
 
 log = logging.getLogger(__name__)
 
+_version = get_version()
+
 CACHE_PATH = os.getenv(
     "WBDATA_CACHE_PATH",
-    os.path.join(
-        appdirs.user_cache_dir(appname="wbdata", version=__version__), "cache"
-    ),
+    os.path.join(appdirs.user_cache_dir(appname="wbdata", version=_version), "cache"),
 )
 
 try:

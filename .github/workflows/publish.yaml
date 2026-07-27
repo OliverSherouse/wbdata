@@ -1,24 +1,37 @@
 name: Publish
+
 on:
-  release:
-    branches:
-      - master
-    types:
-      - published
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
 jobs:
   publish:
-    name: Publish
+    name: Build and publish
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout tag
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Setup Python
         uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
       - name: Install uv
         uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - name: Install dependencies
+        run: uv sync --all-extras --group dev
       - name: Build
-        run: uv build
-      - name: Publish
+        run: uv run python -m build
+      - name: Check distributions
+        run: uvx twine check dist/*
+      - name: Publish to PyPI
         env:
-          UV_PUBLISH_TOKEN: ${{ secrets.pypi_token }}
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_TOKEN || secrets.pypi_token }}
         run: uv publish

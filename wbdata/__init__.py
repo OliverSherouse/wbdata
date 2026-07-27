@@ -4,8 +4,10 @@ wbdata: A wrapper for the World Bank API
 
 from functools import lru_cache
 
+from ._metadata import get_version
 from .client import Client
-from .version import __version__
+
+__version__ = get_version()
 
 
 @lru_cache(maxsize=1)
