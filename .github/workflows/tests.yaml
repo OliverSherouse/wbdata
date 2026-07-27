@@ -66,6 +66,8 @@ jobs:
         uses: astral-sh/setup-uv@v6
         with:
           enable-cache: true
+      - name: Install dependencies
+        run: uv sync --all-extras --group dev
       - name: Check types
         run: uv tool run ty check
 

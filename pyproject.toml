@@ -64,6 +64,7 @@ include = ["wbdata*"]
 wbdata = ["py.typed"]
 
 [tool.setuptools_scm]
+fallback_version = "0+unknown"
 local_scheme = "no-local-version"
 
 [tool.ruff.lint]
