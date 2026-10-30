@@ -148,6 +148,16 @@ def _filter_by_pattern(
     return (row for row in rows if pattern.search(row["name"]))
 
 
+def _is_aggregate_country(country: dict[str, Any]) -> bool:
+    """Return True if a country dictionary represents an aggregate region/group."""
+    region = country.get("region")
+    if isinstance(region, dict):
+        return region.get("value") == "Aggregates" or region.get("id") == "NA"
+    if isinstance(region, str):
+        return region in ("Aggregates", "NA")
+    return False
+
+
 @dataclasses.dataclass
 class Client:
     """
@@ -197,7 +207,8 @@ class Client:
 
         Parameters:
             indicator: the desired indicator code
-            country: a country code, sequence of country codes, or "all" (default)
+            country: a country code, sequence of country codes, "all" (default),
+                or "exclude_aggregates"
             date: the desired date as a string, datetime object or a 2-tuple
                 with start and end dates
             freq: the desired periodicity of the data, one of 'Y' (yearly), 'M'
@@ -212,6 +223,13 @@ class Client:
         Returns:
             A list of dictionaries of observations
         """
+        if isinstance(country, str) and country.strip().lower() == "exclude_aggregates":
+            country = [
+                c["id"]
+                for c in self.get_countries(
+                    exclude_aggregates=True, skip_cache=skip_cache
+                )
+            ]
         url = COUNTRIES_URL
         try:
             c_part = _parse_value_or_iterable(country)
@@ -322,12 +340,13 @@ class Client:
         query: str | re.Pattern | None = None,
         incomelevel: int | str | Sequence[int | str] | None = None,
         lendingtype: int | str | Sequence[int | str] | None = None,
+        exclude_aggregates: bool = False,
         skip_cache: bool = False,
     ) -> SearchResult:
         """
         Retrieve information on one or more country or regional aggregates.
 
-        You can filter your results by specifying `query, `incomelevel`, or
+        You can filter your results by specifying `query`, `incomelevel`, or
         `lendingtype`.  Specifying `query` will only return countries with
         names that match the query as a regular expression. If a string is
         supplied, the match is case insensitive.
@@ -341,27 +360,36 @@ class Client:
             query: a regular expression on which to filter results
             incomelevel: desired incomelevel id or ids on which to filter results
             lendingtype: desired lendingtype id or ids on which to filter results
+            exclude_aggregates: if True, exclude regional and group aggregates
+                from results. Defaults to False.
             skip_cache: bypass cache when downloading
 
         Returns:
             list of dictionaries describing countries
 
         """
+        raw_results: Iterable[dict[str, Any]]
         if country_id:
             if incomelevel or lendingtype or query:
                 raise ValueError("Can't specify country_id and aggregates")
-            return self._id_only_query(COUNTRIES_URL, country_id, skip_cache=skip_cache)
-        params = {}
-        if incomelevel:
-            params["incomeLevel"] = _parse_value_or_iterable(incomelevel)
-        if lendingtype:
-            params["lendingType"] = _parse_value_or_iterable(lendingtype)
-        results = self.fetcher.fetch(
-            url=COUNTRIES_URL, params=params, skip_cache=skip_cache
-        )
-        if query:
-            results = _filter_by_pattern(results, query)
-        return SearchResult(results)
+            raw_results = self._id_only_query(
+                COUNTRIES_URL, country_id, skip_cache=skip_cache
+            )
+        else:
+            params = {}
+            if incomelevel:
+                params["incomeLevel"] = _parse_value_or_iterable(incomelevel)
+            if lendingtype:
+                params["lendingType"] = _parse_value_or_iterable(lendingtype)
+            fetched = self.fetcher.fetch(
+                url=COUNTRIES_URL, params=params, skip_cache=skip_cache
+            )
+            raw_results = _filter_by_pattern(fetched, query) if query else fetched
+
+        if exclude_aggregates:
+            raw_results = [r for r in raw_results if not _is_aggregate_country(r)]
+
+        return SearchResult(raw_results)
 
     def get_indicators(
         self,
@@ -436,7 +464,8 @@ class Client:
 
         Parameters:
             indicator: the desired indicator code
-            country: a country code, sequence of country codes, or "all" (default)
+            country: a country code, sequence of country codes, "all" (default),
+                or "exclude_aggregates"
             date: the desired date as a string, datetime object or a 2-tuple
                 with start and end dates
             freq: the desired periodicity of the data, one of 'Y' (yearly), 'M'
@@ -507,7 +536,8 @@ class Client:
         Parameters:
             indicators: An dictionary where the keys are desired indicators and the
                 values are the desired column names
-            country: a country code, sequence of country codes, or "all" (default)
+            country: a country code, sequence of country codes, "all" (default),
+                or "exclude_aggregates"
             date: the desired date as a string, datetime object or a 2-tuple
                 with start and end dates
             freq: the desired periodicity of the data, one of 'Y' (yearly), 'M'
@@ -517,7 +547,6 @@ class Client:
                 to 2, World Development Indicators)
             parse_dates: if True, convert date field to a datetime.datetime
                 object.
-            skip_cache: bypass the cache when downloading
             keep_levels: if True don't reduce the number of index
                 levels returned if only getting one date or country
             skip_cache: bypass the cache when downloading
@@ -533,6 +562,13 @@ class Client:
                 levels only have one value, the country level is dropped.
 
         """
+        if isinstance(country, str) and country.strip().lower() == "exclude_aggregates":
+            country = [
+                c["id"]
+                for c in self.get_countries(
+                    exclude_aggregates=True, skip_cache=skip_cache
+                )
+            ]
         df = DataFrame(
             serieses={
                 name: self.get_series(

@@ -8,7 +8,7 @@ plugins:
           options:
             show_source: false
             members_order: source
-            docstrings_options:
+            docstring_options:
               returns_named_value: false
               returns_multiple_items: false
 watch:

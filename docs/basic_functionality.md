@@ -33,6 +33,20 @@ These functions require Pandas to be installed to work.
         show_root_full_path: false
         heading_level: 4
 
+### Excluding Aggregates
+
+By default, querying data for all countries (`country="all"`) includes regional and income aggregates (such as "World", "Arab World", and "East Asia & Pacific").
+
+To exclude aggregates and retrieve data for individual countries and territories, use the `country="exclude_aggregates"` parameter value in the data retrieval functions, or `exclude_aggregates=True` when retrieving country lists:
+
+```python
+# Query data excluding regional and income aggregates
+df = wbdata.get_dataframe({'SP.POP.TOTL': 'pop'}, country="exclude_aggregates")
+
+# Or when fetching country metadata:
+countries = wbdata.get_countries(exclude_aggregates=True)
+```
+
 ## Metadata Retrieval
 
 These functions, for the most part, are for finding the parameters you want to

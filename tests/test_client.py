@@ -807,3 +807,126 @@ def test_get_dataframe(mock_client, results, indicators, keep_levels, expected):
     with mock.patch.object(mock_client, "get_series", mock.Mock(side_effect=results)):
         got = mock_client.get_dataframe(indicators=indicators, keep_levels=keep_levels)
         pd.testing.assert_frame_equal(got.loc[expected.index], expected)
+
+
+def test_get_countries_exclude_aggregates(mock_client):
+    mock_data = [
+        {
+            "id": "USA",
+            "iso2Code": "US",
+            "name": "United States",
+            "region": {"id": "NAC", "value": "North America"},
+        },
+        {
+            "id": "ABW",
+            "iso2Code": "AW",
+            "name": "Aruba",
+            "region": {"id": "LCN", "value": "Latin America & Caribbean "},
+        },
+        {
+            "id": "WLD",
+            "iso2Code": "1W",
+            "name": "World",
+            "region": {"id": "NA", "value": "Aggregates"},
+        },
+    ]
+    mock_client.fetcher.fetch = mock.Mock(return_value=mock_data)
+
+    # Default: returns all 3
+    assert len(mock_client.get_countries()) == 3
+
+    # Exclude aggregates: returns USA and Aruba
+    no_aggs = mock_client.get_countries(exclude_aggregates=True)
+    assert [c["id"] for c in no_aggs] == ["USA", "ABW"]
+
+    # When country_id is passed
+    with mock.patch.object(
+        mock_client,
+        "_id_only_query",
+        mock.Mock(return_value=client.SearchResult([mock_data[2]])),
+    ):
+        res = mock_client.get_countries("WLD", exclude_aggregates=True)
+        assert len(res) == 0
+
+
+def test_get_data_exclude_aggregates(mock_client):
+    mock_countries = client.SearchResult(
+        [
+            {"id": "USA", "name": "United States"},
+            {"id": "ABW", "name": "Aruba"},
+        ]
+    )
+    with mock.patch.object(
+        mock_client, "get_countries", mock.Mock(return_value=mock_countries)
+    ) as mock_gc:
+        mock_client.fetcher.fetch = mock.Mock(return_value=[])
+        mock_client.get_data("FOO", country="exclude_aggregates")
+        mock_gc.assert_called_once_with(exclude_aggregates=True, skip_cache=False)
+        mock_client.fetcher.fetch.assert_called_once_with(
+            url="https://api.worldbank.org/v2/countries/USA;ABW/indicators/FOO",
+            params={},
+            skip_cache=False,
+        )
+
+
+def test_get_series_exclude_aggregates(mock_client):
+    mock_result = fetcher.Result(
+        [{"country": {"value": "United States"}, "date": "2020", "value": "100"}],
+        last_updated=dt.datetime(2023, 1, 1),
+    )
+    with mock.patch.object(
+        mock_client, "get_data", mock.Mock(return_value=mock_result)
+    ) as mock_gd:
+        mock_client.get_series("FOO", country="exclude_aggregates")
+        mock_gd.assert_called_once_with(
+            indicator="FOO",
+            country="exclude_aggregates",
+            date=None,
+            freq="Y",
+            source=None,
+            parse_dates=False,
+            skip_cache=False,
+        )
+
+
+def test_get_dataframe_exclude_aggregates(mock_client):
+    mock_countries = client.SearchResult(
+        [
+            {"id": "USA", "name": "United States"},
+            {"id": "ABW", "name": "Aruba"},
+        ]
+    )
+    mock_series = client.Series(
+        [5.0, 6.0],
+        index=pd.MultiIndex.from_tuples(
+            tuples=(
+                ("usa", "2023"),
+                ("usa", "2024"),
+            ),
+            names=["country", "date"],
+        ),
+    )
+    with (
+        mock.patch.object(
+            mock_client, "get_countries", mock.Mock(return_value=mock_countries)
+        ) as mock_gc,
+        mock.patch.object(
+            mock_client,
+            "get_series",
+            mock.Mock(return_value=mock_series),
+        ) as mock_gs,
+    ):
+        mock_client.get_dataframe(
+            {"FOO": "foo"}, country="exclude_aggregates", skip_cache=True
+        )
+        mock_gc.assert_called_once_with(exclude_aggregates=True, skip_cache=True)
+        mock_gs.assert_called_once_with(
+            indicator="FOO",
+            country=["USA", "ABW"],
+            date=None,
+            freq="Y",
+            source=None,
+            parse_dates=False,
+            keep_levels=True,
+            skip_cache=True,
+        )

@@ -1,5 +1,11 @@
 # What's New
 
+## Features in Development
+
+* Ability to exclude World Bank regional and group aggregates:
+    * `exclude_aggregates: bool = False` parameter on `get_countries`.
+    * Magic value `country="exclude_aggregates"` on data retrieval functions (`get_dataframe`, `get_series`, and `get_data`).
+
 ## What's new in wbdata 1.0
 
 The 1.0 release of `wbdata` is not *quite* a full rewrite, but is pretty much the next best thing. The architecture has been reworked, function and argument names have been changed to be more consistent and clear, and a few dependencies have been added for better and more reliable functionality.
@@ -7,7 +13,7 @@ The 1.0 release of `wbdata` is not *quite* a full rewrite, but is pretty much th
 
 ### Features
 
-* Date arguments can now be strings, not just `datetime.datetime` objects. Strings can be in the year, month, or quarter formats used by the World Bank API or in any other format that can be handled by [dateparser][https://dateparser.readthedocs.io/en/latest/].
+* Date arguments can now be strings, not just `datetime.datetime` objects. Strings can be in the year, month, or quarter formats used by the World Bank API or in any other format that can be handled by [dateparser](https://dateparser.readthedocs.io/en/latest/).
 * Default cache behavior can be configured with environment variables, including the path, TTL, and max number of items to cache. See [Cache Module documentation](reference/cache.md) for details.
 * Users can now create `Client` objects if they want to set cache behavior programmatically have multiple caches, or supply their own requests Session.
 * Caching is now provided using the [shelved_cache](https://github.com/mariushelf/shelved_cache) and [cachetools](https://github.com/tkem/cachetools/) libraries. Since a lot of annoying bugs seemed to come from wbdata's home-rolled cache implementation, this should be a good quality-of-life improvement for many people.
