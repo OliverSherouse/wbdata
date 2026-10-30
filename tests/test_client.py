@@ -809,38 +809,24 @@ def test_get_dataframe(mock_client, results, indicators, keep_levels, expected):
         pd.testing.assert_frame_equal(got.loc[expected.index], expected)
 
 
-def test_non_sovereign_constants():
-    import wbdata
-
-    assert len(client.NON_SOVEREIGN_COUNTRIES) == 23
-    assert "Puerto Rico (US)" in client.NON_SOVEREIGN_COUNTRIES
-    assert "Aruba" in client.NON_SOVEREIGN_COUNTRIES
-    assert client.non_sovereign_countries == list(client.NON_SOVEREIGN_COUNTRIES)
-    assert wbdata.NON_SOVEREIGN_COUNTRIES == client.NON_SOVEREIGN_COUNTRIES
-    assert wbdata.non_sovereign_countries == client.non_sovereign_countries
-
-
-def test_get_countries_filtering(mock_client):
+def test_get_countries_exclude_aggregates(mock_client):
     mock_data = [
         {
             "id": "USA",
             "iso2Code": "US",
             "name": "United States",
-            "incomeLevel": {"id": "HIC", "value": "High income"},
             "region": {"id": "NAC", "value": "North America"},
         },
         {
             "id": "ABW",
             "iso2Code": "AW",
             "name": "Aruba",
-            "incomeLevel": {"id": "HIC", "value": "High income"},
             "region": {"id": "LCN", "value": "Latin America & Caribbean "},
         },
         {
             "id": "WLD",
             "iso2Code": "1W",
             "name": "World",
-            "incomeLevel": {"id": "NA", "value": "Aggregates"},
             "region": {"id": "NA", "value": "Aggregates"},
         },
     ]
@@ -850,124 +836,97 @@ def test_get_countries_filtering(mock_client):
     assert len(mock_client.get_countries()) == 3
 
     # Exclude aggregates: returns USA and Aruba
-    no_aggs = mock_client.get_countries(include_aggregates=False)
+    no_aggs = mock_client.get_countries(exclude_aggregates=True)
     assert [c["id"] for c in no_aggs] == ["USA", "ABW"]
 
-    # exclude_aggregates alias
-    no_aggs_alias = mock_client.get_countries(exclude_aggregates=True)
-    assert [c["id"] for c in no_aggs_alias] == ["USA", "ABW"]
-
-    # Exclude non-sovereign: returns USA and World
-    no_ns = mock_client.get_countries(include_non_sovereign=False)
-    assert [c["id"] for c in no_ns] == ["USA", "WLD"]
-
-    # Sovereign only: returns USA only
-    sov = mock_client.get_countries(sovereign_only=True)
-    assert [c["id"] for c in sov] == ["USA"]
+    # When country_id is passed
+    with mock.patch.object(
+        mock_client,
+        "_id_only_query",
+        mock.Mock(return_value=client.SearchResult([mock_data[2]])),
+    ):
+        res = mock_client.get_countries("WLD", exclude_aggregates=True)
+        assert len(res) == 0
 
 
-def test_get_data_filtering(mock_client):
-    mock_rows = fetcher.Result(
+def test_get_data_exclude_aggregates(mock_client):
+    mock_countries = client.SearchResult(
         [
-            {
-                "country": {"id": "US", "value": "United States"},
-                "countryiso3code": "USA",
-                "date": "2020",
-                "value": 100,
-            },
-            {
-                "country": {"id": "AW", "value": "Aruba"},
-                "countryiso3code": "ABW",
-                "date": "2020",
-                "value": 200,
-            },
-            {
-                "country": {"id": "1W", "value": "World"},
-                "countryiso3code": "WLD",
-                "date": "2020",
-                "value": 300,
-            },
-        ],
+            {"id": "USA", "name": "United States"},
+            {"id": "ABW", "name": "Aruba"},
+        ]
+    )
+    with mock.patch.object(
+        mock_client, "get_countries", mock.Mock(return_value=mock_countries)
+    ) as mock_gc:
+        mock_client.fetcher.fetch = mock.Mock(return_value=[])
+        mock_client.get_data("FOO", country="exclude_aggregates")
+        mock_gc.assert_called_once_with(exclude_aggregates=True, skip_cache=False)
+        mock_client.fetcher.fetch.assert_called_once_with(
+            url="https://api.worldbank.org/v2/countries/USA;ABW/indicators/FOO",
+            params={},
+            skip_cache=False,
+        )
+
+
+def test_get_series_exclude_aggregates(mock_client):
+    mock_result = fetcher.Result(
+        [{"country": {"value": "United States"}, "date": "2020", "value": "100"}],
         last_updated=dt.datetime(2023, 1, 1),
     )
-    mock_client.fetcher.fetch = mock.Mock(return_value=mock_rows)
-
-    # Default: returns all 3
-    res_all = mock_client.get_data("FOO")
-    assert len(res_all) == 3
-
-    # Exclude aggregates
-    res_no_aggs = mock_client.get_data("FOO", include_aggregates=False)
-    assert [r["countryiso3code"] for r in res_no_aggs] == ["USA", "ABW"]
-    assert res_no_aggs.last_updated == dt.datetime(2023, 1, 1)
-
-    # Exclude non-sovereign
-    res_no_ns = mock_client.get_data("FOO", include_non_sovereign=False)
-    assert [r["countryiso3code"] for r in res_no_ns] == ["USA", "WLD"]
-
-    # Sovereign only
-    res_sov = mock_client.get_data("FOO", sovereign_only=True)
-    assert [r["countryiso3code"] for r in res_sov] == ["USA"]
-
-    # Special country strings
-    res_countries = mock_client.get_data("FOO", country="countries")
-    assert [r["countryiso3code"] for r in res_countries] == ["USA", "ABW"]
-
-    res_countries_only = mock_client.get_data("FOO", country="countries_only")
-    assert [r["countryiso3code"] for r in res_countries_only] == ["USA", "ABW"]
-
-    res_sov_country = mock_client.get_data("FOO", country="sovereign")
-    assert [r["countryiso3code"] for r in res_sov_country] == ["USA"]
-
-
-def test_get_series_filtering_args(mock_client):
-    with mock.patch.object(mock_client, "get_data", mock.Mock(return_value=[])):
-        mock_client.get_series(
-            "FOO",
-            include_aggregates=False,
-            include_non_sovereign=False,
-            sovereign_only=True,
-            exclude_aggregates=True,
-        )
-        mock_client.get_data.assert_called_once_with(
+    with mock.patch.object(
+        mock_client, "get_data", mock.Mock(return_value=mock_result)
+    ) as mock_gd:
+        mock_client.get_series("FOO", country="exclude_aggregates")
+        mock_gd.assert_called_once_with(
             indicator="FOO",
-            country="all",
+            country="exclude_aggregates",
             date=None,
             freq="Y",
             source=None,
             parse_dates=False,
             skip_cache=False,
-            include_aggregates=False,
-            include_non_sovereign=False,
-            sovereign_only=True,
-            exclude_aggregates=True,
         )
 
 
-def test_get_dataframe_filtering_args(mock_client):
-    with mock.patch.object(
-        mock_client,
-        "get_series",
-        mock.Mock(return_value=client.Series([1.0], index=pd.Index(["USA"]))),
+def test_get_dataframe_exclude_aggregates(mock_client):
+    mock_countries = client.SearchResult(
+        [
+            {"id": "USA", "name": "United States"},
+            {"id": "ABW", "name": "Aruba"},
+        ]
+    )
+    mock_series = client.Series(
+        [5.0, 6.0],
+        index=pd.MultiIndex.from_tuples(
+            tuples=(
+                ("usa", "2023"),
+                ("usa", "2024"),
+            ),
+            names=["country", "date"],
+        ),
+    )
+    with (
+        mock.patch.object(
+            mock_client, "get_countries", mock.Mock(return_value=mock_countries)
+        ) as mock_gc,
+        mock.patch.object(
+            mock_client,
+            "get_series",
+            mock.Mock(return_value=mock_series),
+        ) as mock_gs,
     ):
         mock_client.get_dataframe(
-            {"FOO": "foo"},
-            include_aggregates=False,
-            include_non_sovereign=False,
-            sovereign_only=True,
-            exclude_aggregates=True,
+            {"FOO": "foo"}, country="exclude_aggregates", skip_cache=True
         )
-        mock_client.get_series.assert_called_once_with(
+        mock_gc.assert_called_once_with(exclude_aggregates=True, skip_cache=True)
+        mock_gs.assert_called_once_with(
             indicator="FOO",
-            country="all",
+            country=["USA", "ABW"],
             date=None,
             freq="Y",
             source=None,
             parse_dates=False,
             keep_levels=True,
-            skip_cache=False,
-            include_aggregates=False,
-            include_non_sovereign=False,
-            sovereign_only=True,
-            exclude_aggregates=True,
+            skip_cache=True,
         )

@@ -2,11 +2,9 @@
 
 ## Features in Development
 
-* Ability to exclude World Bank aggregates and/or non-sovereign territories:
-    * `include_aggregates: bool = True` parameter on `get_dataframe`, `get_series`, `get_data`, and `get_countries`.
-    * `include_non_sovereign: bool = True` and `sovereign_only: bool = False` parameters to filter non-sovereign countries.
-    * Special string values for `country`: `country="countries"` (excluding aggregates) and `country="sovereign"` (sovereign countries only).
-    * `wbdata.NON_SOVEREIGN_COUNTRIES` list of non-sovereign territories exported at package level.
+* Ability to exclude World Bank regional and group aggregates:
+    * `exclude_aggregates: bool = False` parameter on `get_countries`.
+    * Magic value `country="exclude_aggregates"` on data retrieval functions (`get_dataframe`, `get_series`, and `get_data`).
 
 ## What's new in wbdata 1.0
 

@@ -33,29 +33,19 @@ These functions require Pandas to be installed to work.
         show_root_full_path: false
         heading_level: 4
 
-### Excluding Aggregates and Non-Sovereign Countries
+### Excluding Aggregates
 
-By default, querying data for all countries (`country="all"`) includes regional and income aggregates (such as "World", "Arab World", and "High income") as well as non-sovereign territories/dependencies (such as Puerto Rico, Greenland, and Aruba).
+By default, querying data for all countries (`country="all"`) includes regional and income aggregates (such as "World", "Arab World", and "East Asia & Pacific").
 
-You can easily exclude aggregates or filter down to sovereign countries only across `get_dataframe`, `get_series`, `get_data`, and `get_countries`:
+To exclude aggregates and retrieve data for individual countries and territories, use the `country="exclude_aggregates"` parameter value in the data retrieval functions, or `exclude_aggregates=True` when retrieving country lists:
 
 ```python
-# Exclude aggregates (returns 217 countries and territories)
-df = wbdata.get_dataframe({'SP.POP.TOTL': 'pop'}, include_aggregates=False)
-# or equivalently using special country keyword:
-df = wbdata.get_dataframe({'SP.POP.TOTL': 'pop'}, country="countries")
+# Query data excluding regional and income aggregates
+df = wbdata.get_dataframe({'SP.POP.TOTL': 'pop'}, country="exclude_aggregates")
 
-# Exclude both aggregates and non-sovereign territories (returns 194 sovereign states)
-df = wbdata.get_dataframe({'SP.POP.TOTL': 'pop'}, sovereign_only=True)
-# or equivalently:
-df = wbdata.get_dataframe({'SP.POP.TOTL': 'pop'}, country="sovereign")
-
-# Similarly when retrieving country metadata:
-countries = wbdata.get_countries(include_aggregates=False)
-sovereign_countries = wbdata.get_countries(sovereign_only=True)
+# Or when fetching country metadata:
+countries = wbdata.get_countries(exclude_aggregates=True)
 ```
-
-The tuple of recognized non-sovereign countries is also directly exported as `wbdata.NON_SOVEREIGN_COUNTRIES` (and `wbdata.non_sovereign_countries`).
 
 ## Metadata Retrieval
 
